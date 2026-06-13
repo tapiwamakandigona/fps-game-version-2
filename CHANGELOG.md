@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.14 — Enemy variety: Spitter & Exploder
+- **Spitter** (sickly green, from wave 3) — hangs back at range and lobs glowing acid globs
+  that arc toward you. They’re dodgeable, deal chip damage on hit, and the projectile pops on
+  impact. Forces you to move instead of camping.
+- **Exploder** (glowing orange, from wave 4) — fragile but *fast*; rushes you and detonates on
+  contact for heavy radial-falloff damage. Shoot it before it reaches you and it still blows up
+  where it dies — useful for chaining packs, dangerous up close.
+- Both read at a glance: tinted bodies, an unstable orange pulse on exploders, and dedicated
+  minimap blip colours (green spitter / orange exploder).
+
 ## v2.13 — More weapons: SMG, Rifle & Grenades
 - **SMG** (key *3*) — fast full-auto, low per-shot damage, 30-round mag with a big reserve.
   Great for swarms.

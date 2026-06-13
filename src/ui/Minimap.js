@@ -10,9 +10,12 @@ const SCALE = RADIUS / WORLD_R;
 
 // Variant → blip colour
 const BLIP_COLORS = {
-  normal: '#ff5252',
-  runner: '#bfff45',
-  brute:  '#ff3d3d',
+  normal:   '#ff5252',
+  runner:   '#bfff45',
+  brute:    '#ff3d3d',
+  spitter:  '#9fe04a',
+  exploder: '#ff9b2e',
+  boss:     '#ff0033',
 };
 
 export class Minimap {

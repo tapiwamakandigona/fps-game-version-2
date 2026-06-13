@@ -5,6 +5,7 @@ export const TOTAL_WAVES = 5;
 const WAVE_COUNTS = [6, 9, 12, 15, 14]; // wave 5 also spawns 1 boss
 const BOSS_NAME = 'THE BUTCHER';
 const CONCURRENT_CAP = 16;
+const SPIT_GEO = new THREE.SphereGeometry(0.13, 10, 8);
 const SPAWN_INTERVAL = 0.55;
 const INTERMISSION = 4.0;
 
@@ -27,7 +28,10 @@ export class EnemyManager {
     this.onVictory = null;
     this.onBossSpawn = null;   // (boss) => void
     this.onBossDeath = null;   // () => void
+    this.onProjectileImpact = null; // (pos) => void  spitter glob hit FX
+    this.onEnemyExplode = null;     // (pos) => void  exploder FX
     this.boss = null;
+    this.spits = [];
   }
 
   start() { this._beginWave(1); }
@@ -88,14 +92,53 @@ export class EnemyManager {
     const z = new Zombie(this.scene, this.player, this.colliders, this._variantStats());
     z.spawn({ x: best.x + (Math.random() - 0.5) * 3, z: best.z + (Math.random() - 0.5) * 3 });
     z.onDeath = (zz) => this._onKill(zz);
+    z.onSpit = () => this._spawnSpit(z.group.position);
+    z.onExplode = (pos) => { if (this.onEnemyExplode) this.onEnemyExplode(pos); };
     this.zombies.push(z);
+  }
+
+  _spawnSpit(fromPos) {
+    const start = fromPos.clone(); start.y = 1.3;
+    const mat = new THREE.MeshStandardMaterial({ color: 0x9fe04a, emissive: 0x4a8a1e, emissiveIntensity: 1.2, roughness: 0.5 });
+    const mesh = new THREE.Mesh(SPIT_GEO, mat);
+    mesh.position.copy(start); mesh.userData.noHit = true;
+    this.scene.add(mesh);
+    const dir = this.player.camera.position.clone().sub(start).normalize();
+    this.spits.push({ mesh, mat, pos: start.clone(), vel: dir.multiplyScalar(16), life: 2.5 });
+  }
+
+  _updateSpits(dt) {
+    for (let i = this.spits.length - 1; i >= 0; i--) {
+      const s = this.spits[i];
+      s.life -= dt;
+      s.pos.addScaledVector(s.vel, dt);
+      s.mesh.position.copy(s.pos);
+      const d = s.pos.distanceTo(this.player.camera.position);
+      if (d < 0.7) {
+        if (this.player.alive) this.player.takeDamage(8);
+        if (this.onProjectileImpact) this.onProjectileImpact(s.pos.clone());
+        this._removeSpit(i); continue;
+      }
+      if (s.pos.y <= 0.1 || s.life <= 0) {
+        if (this.onProjectileImpact) this.onProjectileImpact(s.pos.clone());
+        this._removeSpit(i);
+      }
+    }
+  }
+
+  _removeSpit(i) {
+    const s = this.spits[i];
+    this.scene.remove(s.mesh); s.mat.dispose();
+    this.spits.splice(i, 1);
   }
 
   // Mix in runner/brute variants as waves progress.
   _pickVariant(w) {
     const r = Math.random();
-    if (w >= 3 && r < 0.12 + (w - 3) * 0.05) return 'brute';   // tanky, from wave 3
-    if (w >= 2 && r < 0.45) return 'runner';                    // fast, from wave 2
+    if (w >= 4 && r < 0.12) return 'exploder';                  // suicide bomber, from wave 4
+    if (w >= 3 && r < 0.24) return 'spitter';                   // ranged, from wave 3
+    if (w >= 3 && r < 0.40) return 'brute';                     // tanky, from wave 3
+    if (w >= 2 && r < 0.62) return 'runner';                    // fast, from wave 2
     return 'normal';
   }
 
@@ -111,6 +154,14 @@ export class EnemyManager {
     if (v === 'brute') {
       return { variant: 'brute', scale: 1.4, health: s.health * 2.6, speed: s.speed * 0.62,
         damage: s.damage * 1.8, score: base + 80 };
+    }
+    if (v === 'spitter') {
+      return { variant: 'spitter', scale: 0.95, health: s.health * 0.7, speed: s.speed * 0.9,
+        damage: 8, score: base + 50 };
+    }
+    if (v === 'exploder') {
+      return { variant: 'exploder', scale: 1.0, health: s.health * 0.5, speed: s.speed * 1.25,
+        damage: s.damage * 2.2, score: base + 60 };
     }
     return { variant: 'normal', scale: 1, health: s.health, speed: s.speed, damage: s.damage, score: base };
   }
@@ -132,6 +183,9 @@ export class EnemyManager {
         this.spawnT = SPAWN_INTERVAL;
       }
     }
+
+    // spitter projectiles
+    this._updateSpits(dt);
 
     // update + cull
     for (const z of this.zombies) z.update(dt, t);
@@ -163,6 +217,7 @@ export class EnemyManager {
   reset() {
     for (const z of this.zombies) z.dispose();
     this.zombies = [];
+    for (let i = this.spits.length - 1; i >= 0; i--) this._removeSpit(i);
     this.wave = 0; this.toSpawn = 0; this.state = 'idle'; this.boss = null;
   }
 }

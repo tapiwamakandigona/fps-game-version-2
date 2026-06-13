@@ -111,6 +111,17 @@ export class Game {
       this.shake.add(0.12);
     };
     this.enemies.onVictory = () => this._end(true);
+    this.enemies.onProjectileImpact = (pos) => {
+      this.impacts.spawn(pos, 0x9fe04a, 1.4);
+      this.shake.add(0.18);
+      this.audio.hurt();
+    };
+    this.enemies.onEnemyExplode = (pos) => {
+      this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xffa030, 4);
+      this.shake.add(0.6);
+      this._hitStop = Math.max(this._hitStop, 0.04);
+      this.audio.explosion();
+    };
     this.enemies.onBossSpawn = (b) => {
       this.hud.showBoss(b.name || 'BOSS');
       this.hud.message('\u26a0  ' + (b.name || 'BOSS') + ' INCOMING', 2000);

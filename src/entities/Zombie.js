@@ -26,6 +26,9 @@ export class Zombie {
     this.flash = 0;
     this.deathT = 0;
     this.onDeath = null;        // (zombie) => void
+    this.onSpit = null;         // spitter: () => void  (ranged attack)
+    this.onExplode = null;      // exploder: (worldPos) => void  (FX hook)
+    this._detonated = false;
     this._dir = new THREE.Vector3();
     this._build();
   }
@@ -35,6 +38,8 @@ export class Zombie {
     const tint = this.variant === 'runner' ? { skin: 0x97b14a, cloth: 0x3a2c1c }
       : this.variant === 'brute' ? { skin: 0x7a3a34, cloth: 0x241c1c }
       : this.variant === 'boss' ? { skin: 0x8a1422, cloth: 0x180810 }
+      : this.variant === 'spitter' ? { skin: 0x6fae3a, cloth: 0x1c3320 }
+      : this.variant === 'exploder' ? { skin: 0xc25a1e, cloth: 0x3a1e0c }
       : { skin: 0x5a7a4a, cloth: 0x2c3340 };
     const skin = new THREE.MeshStandardMaterial({ color: tint.skin, roughness: 0.85, metalness: 0.0 });
     const cloth = new THREE.MeshStandardMaterial({ color: tint.cloth, roughness: 0.95, metalness: 0.0 });
@@ -84,8 +89,21 @@ export class Zombie {
   _die() {
     this.alive = false;
     this.deathT = 0;
+    if (this.variant === 'exploder' && !this._detonated) {
+      this._detonated = true;
+      const d = this.group.position.distanceTo(this.player.camera.position);
+      const R = 3.4;
+      if (d <= R && this.player.alive) {
+        const f = 1 - d / R;
+        this.player.takeDamage(Math.max(10, Math.round(this.damage * (0.45 + f))));
+      }
+      if (this.onExplode) this.onExplode(this.group.position.clone());
+    }
     if (this.onDeath) this.onDeath(this, false);
   }
+
+  // Exploder reached the player (or otherwise triggers): blow up now.
+  _detonate() { if (this.alive) { this.health = 0; this._die(); } }
 
   update(dt, t) {
     if (this.dead) return;
@@ -108,13 +126,23 @@ export class Zombie {
     this.group.rotation.y = Math.atan2(this._dir.x, this._dir.z);
 
     const attackRange = 1.5;
-    if (dist > attackRange) {
+    // Spitters hang back and lob; everyone else closes to melee. Exploders rush
+    // in and detonate on contact.
+    const stopDist = this.variant === 'spitter' ? 7.5 : attackRange;
+    if (dist > stopDist) {
       g.x += this._dir.x * this.speed * dt;
       g.z += this._dir.z * this.speed * dt;
       this._resolve(g);
     } else if (this.player.alive) {
-      this.attackCd -= dt;
-      if (this.attackCd <= 0) { this.attackCd = 1.0; this.player.takeDamage(this.damage); this.lunge = 0.4; }
+      if (this.variant === 'spitter') {
+        this.attackCd -= dt;
+        if (this.attackCd <= 0) { this.attackCd = 2.2; if (this.onSpit) this.onSpit(); }
+      } else if (this.variant === 'exploder') {
+        this._detonate();
+      } else {
+        this.attackCd -= dt;
+        if (this.attackCd <= 0) { this.attackCd = 1.0; this.player.takeDamage(this.damage); this.lunge = 0.4; }
+      }
     }
 
     // walk animation
@@ -131,6 +159,12 @@ export class Zombie {
       // keep a pulsing red glow when not freshly hit
       const pulse = 0.18 + 0.1 * Math.sin(t * 3);
       for (const m of this._mats) m.emissive.setRGB(pulse, 0.02, 0.02);
+    } else if (this.variant === 'exploder') {
+      // unstable orange pulse — telegraphs the bomber
+      const pulse = 0.25 + 0.22 * Math.sin(t * 9 + g.x);
+      for (const m of this._mats) m.emissive.setRGB(pulse, pulse * 0.4, 0.0);
+    } else if (this.variant === 'spitter') {
+      for (const m of this._mats) m.emissive.setRGB(0.05, 0.18, 0.06);
     }
   }
 
