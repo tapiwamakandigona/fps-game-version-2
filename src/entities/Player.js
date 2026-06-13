@@ -87,6 +87,13 @@ export class Player {
     }
   }
 
+  heal(n) {
+    if (!this.alive) return 0;
+    const before = this.health;
+    this.health = Math.min(this.maxHealth, this.health + n);
+    return this.health - before;
+  }
+
   takeDamage(n) {
     if (!this.alive) return;
     this.health -= n;

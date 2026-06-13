@@ -5,6 +5,7 @@ import { Warehouse } from '../world/Warehouse.js';
 import { Player } from '../entities/Player.js';
 import { WeaponManager } from '../weapons/WeaponManager.js';
 import { EnemyManager, TOTAL_WAVES } from '../entities/EnemyManager.js';
+import { PickupManager } from '../entities/Pickup.js';
 import { Input } from '../systems/Input.js';
 import { TouchControls, isTouchDevice } from '../systems/TouchControls.js';
 import { Settings } from '../systems/Settings.js';
@@ -58,6 +59,8 @@ export class Game {
     this.player = new Player(this.engine.camera, this.world.colliders);
     this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
+    this.pickups = new PickupManager(this.engine.scene);
+    this.pickups.onCollect = (type, amount) => this._onPickup(type, amount);
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); };
     this.weapons.onHit = (z, headshot) => {
@@ -66,7 +69,10 @@ export class Game {
     };
     this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); };
     this.enemies.onIntermission = (next, secs) => this.hud.message(`WAVE CLEARED — next in ${secs}`, 1100);
-    this.enemies.onKill = (z, sc) => { this.score += sc; this.hud.setScore(this.score); };
+    this.enemies.onKill = (z, sc) => {
+      this.score += sc; this.hud.setScore(this.score);
+      this.pickups.maybeDrop(z.group.position, z.variant);
+    };
     this.enemies.onVictory = () => this._end(true);
 
     this.input.onReload = () => { if (this.state === 'playing') this.weapons.reload(); };
@@ -132,6 +138,7 @@ export class Game {
     this.hud.hideMenu(); this.hud.hideEnd();
     this.score = 0; this.hud.setScore(0);
     this.enemies.reset();
+    this.pickups.reset();
     this.player.spawn(this.world.playerSpawn);
     this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
@@ -140,6 +147,18 @@ export class Game {
     if (this.touch) this.touchControls.setEnabled(true);
     this.state = 'playing';
     this.enemies.start();
+  }
+
+  _onPickup(type, amount) {
+    if (type === 'health') {
+      const healed = this.player.heal(amount);
+      this.hud.setHealth(this.player.health, this.player.maxHealth);
+      this.hud.message(healed > 0 ? `+${Math.round(healed)} HP` : 'HEALTH FULL', 900);
+    } else {
+      const took = this.weapons.addAmmo(amount);
+      this.hud.message(took ? `+${amount} SHELLS` : 'AMMO FULL', 900);
+    }
+    this.audio.pickup();
   }
 
   _end(victory) {
@@ -179,6 +198,7 @@ export class Game {
       this.player.update(dt, this.input);
       this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
+      this.pickups.update(dt, this.engine.camera.position);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
       if (!this.player.alive) this._end(false);
     }

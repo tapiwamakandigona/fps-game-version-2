@@ -81,6 +81,7 @@ export class Audio {
     this._env(lp, t, 0.18, 0.5); nz.start(t); nz.stop(t + 0.2);
   }
 
+  pickup() { this._tones([660, 880], 0.07); }
   wave() { this._tones([330, 440, 550], 0.12); }
   victory() { this._tones([523, 659, 784, 1047], 0.16); }
   gameover() { this._tones([440, 330, 247, 175], 0.2); }

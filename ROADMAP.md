@@ -20,7 +20,7 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.2 Tracer rounds + muzzle-origin bullet feedback
 - [x] v2.2 Second weapon (shotgun, 8-pellet spread) + 1/2 + mouse-wheel switching
 - [x] v2.5 In-game brightness slider + quality presets (Low/Med/High)
-- [ ] Ammo/health pickups dropped by zombies; pickup pacing tuning
+- [x] v2.6 Health/ammo pickups dropped by zombies (finite shotgun reserve)
 - [ ] Minimap / enemy direction indicators on the HUD
 - [ ] Sprint stamina + view bob + landing impact for game feel
 - [ ] Damage numbers floating off enemies; kill streak / combo scoring

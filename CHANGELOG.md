@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6 — Health & ammo pickups
+- Zombies now sometimes **drop pickups** on death: green **health** (+25 HP) or amber
+  **ammo** (+8 shotgun shells). Brutes drop more often. Pickups glow, bob, spin, and
+  fade out after ~14s; walk over them to collect (bullets pass through them).
+- **Ammo economy:** the pistol keeps an **infinite reserve** (always-usable fallback so
+  you can never fully soft-lock), while the **shotgun now has a finite reserve** (starts
+  18, caps at 36) that you top up with ammo pickups. HUD shows the live reserve count.
+- Pickup chime + on-screen "+25 HP / +8 SHELLS" feedback.
+
 ## v2.5 — Settings panel
 - New **SETTINGS** panel (from the menu or pause): **Brightness** slider, **Quality**
   presets (**Low / Med / High** — Low drops bloom + shadows and pixel ratio so weak

@@ -11,6 +11,7 @@ export class HUD {
     this.ammoName = $('ammo-name');
     this.ammoMag = $('ammo-mag');
     this.ammoMax = $('ammo-max');
+    this.ammoRes = $('ammo-res');
     this.centerMsg = $('center-msg');
     this.hitmarker = $('hitmarker');
     this.vignette = $('damage-vignette');
@@ -32,7 +33,13 @@ export class HUD {
       : 'linear-gradient(90deg,#e3493b,#ff7a6b)';
   }
 
-  setAmmo(mag, max) { this.ammoMag.textContent = mag; this.ammoMax.textContent = max; }
+  setAmmo(mag, max, reserve) {
+    this.ammoMag.textContent = mag;
+    this.ammoMax.textContent = max;
+    if (this.ammoRes && reserve !== undefined) {
+      this.ammoRes.textContent = isFinite(reserve) ? reserve : '∞';
+    }
+  }
   setWeapon(name) { if (this.ammoName) this.ammoName.textContent = name; }
 
   message(text, holdMs = 1400) {

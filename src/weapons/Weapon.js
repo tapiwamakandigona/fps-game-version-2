@@ -12,6 +12,8 @@ export class Weapon {
     this.name = cfg.name;
     this.magSize = cfg.mag;
     this.mag = cfg.mag;
+    this.reserve = cfg.reserve ?? Infinity;   // pistol = ∞ (always-usable fallback)
+    this.maxReserve = cfg.maxReserve ?? this.reserve;
     this.cooldown = 0; this.reloadT = 0; this.reloading = false;
     this.recoil = 0;
     this.raycaster = new THREE.Raycaster();
@@ -79,8 +81,19 @@ export class Weapon {
     this._muzzle();
     const pellets = this.cfg.pellets || 1;
     for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1);
-    if (this.onAmmoChange) this.onAmmoChange(this.mag, this.magSize);
+    this._emitAmmo();
     if (this.mag === 0) this.reload();
+  }
+
+  _emitAmmo() { if (this.onAmmoChange) this.onAmmoChange(this.mag, this.magSize, this.reserve); }
+
+  // Add reserve rounds (from an ammo pickup). No-op for infinite-reserve weapons.
+  addReserve(n) {
+    if (!isFinite(this.reserve)) return false;
+    if (this.reserve >= this.maxReserve) return false;
+    this.reserve = Math.min(this.maxReserve, this.reserve + n);
+    this._emitAmmo();
+    return true;
   }
 
   _fireOne(spread) {
@@ -124,7 +137,7 @@ export class Weapon {
   }
 
   reload() {
-    if (this.reloading || this.mag === this.magSize) return;
+    if (this.reloading || this.mag === this.magSize || this.reserve <= 0) return;
     this.reloading = true; this.reloadT = this.cfg.reloadTime;
     this.audio.reload();
   }
@@ -148,8 +161,12 @@ export class Weapon {
     if (this.reloading) {
       this.reloadT -= dt;
       if (this.reloadT <= 0) {
-        this.reloading = false; this.mag = this.magSize;
-        if (this.onAmmoChange) this.onAmmoChange(this.mag, this.magSize);
+        this.reloading = false;
+        const need = this.magSize - this.mag;
+        const take = isFinite(this.reserve) ? Math.min(need, this.reserve) : need;
+        this.mag += take;
+        if (isFinite(this.reserve)) this.reserve -= take;
+        this._emitAmmo();
       }
     }
 
@@ -172,7 +189,8 @@ export class Weapon {
   }
 
   reset() {
-    this.mag = this.magSize; this.reloading = false; this.cooldown = 0; this.recoil = 0;
+    this.mag = this.magSize; this.reserve = this.cfg.reserve ?? Infinity;
+    this.reloading = false; this.cooldown = 0; this.recoil = 0;
     for (const tr of this.tracers) { this.scene.remove(tr.line); tr.line.geometry.dispose(); tr.line.material.dispose(); }
     this.tracers = [];
   }
