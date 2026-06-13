@@ -21,7 +21,7 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.2 Second weapon (shotgun, 8-pellet spread) + 1/2 + mouse-wheel switching
 - [x] v2.5 In-game brightness slider + quality presets (Low/Med/High)
 - [x] v2.6 Health/ammo pickups dropped by zombies (finite shotgun reserve)
-- [ ] Minimap / enemy direction indicators on the HUD
+- [x] v2.7 Minimap / enemy direction indicators on the HUD
 - [ ] Sprint stamina + view bob + landing impact for game feel
 - [ ] Damage numbers floating off enemies; kill streak / combo scoring
 - [x] v2.3 "Runner" (fast, low HP) + "Brute" (slow, tanky, high-damage) zombie variants

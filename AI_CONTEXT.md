@@ -40,6 +40,7 @@ driven in automated tests — verify *rendering* + *console errors*, play-test b
 - `systems/Input.js` — keyboard/mouse state.
 - `systems/Audio.js` — WebAudio procedural SFX.
 - `ui/HUD.js` — DOM overlay: score, HP bar, ammo, wave, crosshair, center messages, menu + end screens.
+- `ui/Minimap.js` — Canvas-based rotating radar minimap; shows player, enemy blips (color-coded by variant), and level geometry outlines.
 
 ## Level design (one level: "Warehouse — Containment")
 Wave survival in a single enclosed warehouse. 5 waves, escalating zombie count/speed.

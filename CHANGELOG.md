@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.7 — Minimap (2026-06-13)
+- New **rotating minimap** in the top-right corner of the HUD, radar-style.
+- **Player** shown as a blue triangle at center; the map rotates with the camera
+  so "up" is always your facing direction.
+- **Enemy blips** color-coded by variant: red (normal), yellow-green (runner),
+  dark red (brute). Only alive enemies are shown.
+- **Level geometry** (walls, pillars, crates, containers) rendered as grey outlines
+  so you can orient yourself at a glance.
+- Subtle **grid rings** for distance reference.
+- Responsive: auto-shrinks on mobile/touch devices.
+- Hidden during menus and end screens; only visible during gameplay.
+
 ## v2.6 — Health & ammo pickups
 - Zombies now sometimes **drop pickups** on death: green **health** (+25 HP) or amber
   **ammo** (+8 shotgun shells). Brutes drop more often. Pickups glow, bob, spin, and
