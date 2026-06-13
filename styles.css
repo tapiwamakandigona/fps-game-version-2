@@ -198,3 +198,7 @@ body.is-touch #combo { top: 64px; font-size: 18px; }
 #boss-fill { height: 100%; width: 100%; background: linear-gradient(90deg,#b81022,#ff4533,#ff7a3c);
   transition: width 0.12s linear; }
 body.is-touch #boss-name { font-size: 14px; }
+
+/* ---------- Grenade counter ---------- */
+#ammo-nade { font-size: 13px; color: #9fd9a0; opacity: 0.92; margin-top: 1px; }
+#ammo-nade .reload-key { color: #6fae70; }

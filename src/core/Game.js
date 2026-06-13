@@ -4,6 +4,7 @@ import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Player } from '../entities/Player.js';
 import { WeaponManager } from '../weapons/WeaponManager.js';
+import { GrenadeManager } from '../weapons/Grenade.js';
 import { EnemyManager, TOTAL_WAVES } from '../entities/EnemyManager.js';
 import { PickupManager } from '../entities/Pickup.js';
 import { Input } from '../systems/Input.js';
@@ -72,11 +73,20 @@ export class Game {
     this.impacts = new Impacts(this.engine.scene, this.engine.camera);
     this.shake = new ScreenShake();
     this._hitStop = 0;
+    this.grenadeMgr = new GrenadeManager(this.engine.scene, this.engine.camera, () => this.enemies.zombies, 24);
+    this.grenadeMgr.onChange = (n) => this.hud.setGrenades(n);
+    this.grenadeMgr.onExplode = (pos) => {
+      this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xffa030, 5);
+      this.shake.add(0.7);
+      this._hitStop = Math.max(this._hitStop, 0.05);
+      this.audio.explosion();
+    };
     this.combo = 0; this.comboTimer = 0;
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
     // Juice: shake on fire, sparks at impact points.
-    this.weapons.onShoot = (type) => this.shake.add(type === 'shotgun' ? 0.32 : 0.16);
+    this.weapons.onShoot = (type) => this.shake.add(
+      { shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
     this.weapons.onImpact = (point, isZomb, headshot) => {
       const color = isZomb ? (headshot ? 0xffe24d : 0xff5a5a) : 0xffd27f;
       this.impacts.spawn(point, color, headshot ? 1.5 : (isZomb ? 1.1 : 0.9));
@@ -86,7 +96,7 @@ export class Game {
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
-    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); };
+    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); this.grenadeMgr.refill(); };
     this.enemies.onIntermission = (next, secs) => this.hud.message(`WAVE CLEARED — next in ${secs}`, 1100);
     this.enemies.onKill = (z, sc) => {
       // combo: each kill within the window raises the points multiplier (caps at 3x)
@@ -118,6 +128,7 @@ export class Game {
     this.input.onShoot = () => { if (this.state === 'playing') this.weapons.fire(); };
     this.input.onSwitch = (i) => { if (this.state === 'playing') this.weapons.switchTo(i); };
     this.input.onSwitchNext = () => { if (this.state === 'playing') this.weapons.next(); };
+    this.input.onGrenade = () => { if (this.state === 'playing') this.grenadeMgr.throw(); };
   }
 
   _wireControls() {
@@ -180,6 +191,7 @@ export class Game {
     this.pickups.reset();
     this.damageNumbers.reset();
     this.impacts.reset(); this.shake.reset(); this._hitStop = 0;
+    this.grenadeMgr.reset();
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
@@ -249,6 +261,7 @@ export class Game {
       this.pickups.update(dt, this.engine.camera.position);
       this.damageNumbers.update(dt);
       this.impacts.update(dt);
+      this.grenadeMgr.update(dt);
       if (this.combo > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }

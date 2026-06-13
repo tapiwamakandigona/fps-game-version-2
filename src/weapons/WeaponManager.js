@@ -7,6 +7,12 @@ export const WEAPON_CONFIGS = [
   // Shotgun: finite reserve, topped up by ammo pickups.
   { name: 'SHOTGUN', type: 'shotgun', pellets: 8, spreadDeg: 7, damage: 16, headshotMult: 1.6,
     mag: 6, fireInterval: 0.7, reloadTime: 1.5, auto: false, reserve: 18, maxReserve: 36 },
+  // SMG: fast full-auto, low per-shot damage, light spread. Big mag, finite reserve.
+  { name: 'SMG', type: 'smg', pellets: 1, spreadDeg: 2.2, damage: 17, headshotMult: 1.8,
+    mag: 30, fireInterval: 0.072, reloadTime: 1.3, auto: true, reserve: 120, maxReserve: 240 },
+  // Rifle: slow semi-auto, hard-hitting and pinpoint. Rewards headshots.
+  { name: 'RIFLE', type: 'rifle', pellets: 1, spreadDeg: 0, damage: 62, headshotMult: 2.4,
+    mag: 8, fireInterval: 0.42, reloadTime: 1.7, auto: false, reserve: 40, maxReserve: 80 },
 ];
 
 // Holds all weapons, handles switching, and routes fire/reload/update to the active one.

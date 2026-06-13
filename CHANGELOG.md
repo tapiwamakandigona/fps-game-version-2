@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.13 — More weapons: SMG, Rifle & Grenades
+- **SMG** (key *3*) — fast full-auto, low per-shot damage, 30-round mag with a big reserve.
+  Great for swarms.
+- **Rifle** (key *4*) — slow, pinpoint semi-auto that hits like a truck (62 dmg, 2.4× on
+  headshots). Rewards aim.
+- **Throwable grenade** (key *G*, NADE button on mobile) — arcs and bounces, then explodes
+  with radial falloff damage to everything nearby, a big boom, flash and screen shake. You get
+  *3 per wave* (refilled each wave). Live count shown on the HUD.
+- Each gun has its own viewmodel, muzzle-flash size, and screen-shake weight. Switch with
+  *1–4* or the mouse wheel / SWAP button.
+
 ## v2.12 — Juice pass
 - **Screen shake** — a trauma-based camera shake punches on every shot (bigger on the
   shotgun), when you take damage, when the boss arrives, and on kills. It's applied to the

@@ -47,6 +47,19 @@ export class Audio {
     this._env(bp, t, 0.1, 0.35); nz.start(t); nz.stop(t + 0.12);
   }
 
+  explosion() {
+    if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    // deep boom
+    const osc = this.ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, t); osc.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+    this._env(osc, t, 0.55, 0.8); osc.start(t); osc.stop(t + 0.6);
+    // body of noise
+    const nz = this._noise(0.5); const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(1800, t); lp.frequency.exponentialRampToValueAtTime(200, t + 0.45);
+    nz.connect(lp); this._env(lp, t, 0.45, 0.7); nz.start(t); nz.stop(t + 0.5);
+  }
+
   empty() {
     if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
     const t = this.ctx.currentTime;

@@ -55,6 +55,11 @@ export class HUD {
   }
   setWeapon(name) { if (this.ammoName) this.ammoName.textContent = name; }
 
+  setGrenades(n) {
+    if (!this._nade) this._nade = document.getElementById('nade-count');
+    if (this._nade) this._nade.textContent = n;
+  }
+
   showBoss(name) {
     if (!this.bossBar) return;
     if (this.bossName) this.bossName.textContent = name;

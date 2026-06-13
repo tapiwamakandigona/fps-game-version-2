@@ -30,6 +30,8 @@ export class Weapon {
     this.group = new THREE.Group();
     this.group.userData.noHit = true;
     if (this.cfg.type === 'shotgun') this._buildShotgun();
+    else if (this.cfg.type === 'smg') this._buildSMG();
+    else if (this.cfg.type === 'rifle') this._buildRifle();
     else this._buildPistol();
 
     this.flash = new THREE.Mesh(
@@ -67,6 +69,31 @@ export class Weapon {
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.32), wood); stock.position.set(0, -0.06, 0.18); stock.rotation.x = 0.18;
     this.group.add(barrel, pump, stock);
     this._muzzlePos = new THREE.Vector3(0, 0.02, -0.78);
+  }
+
+  _buildSMG() {
+    const body = new THREE.MeshStandardMaterial({ color: 0x1c1f24, roughness: 0.5, metalness: 0.7 });
+    const accent = new THREE.MeshStandardMaterial({ color: 0x2e3238, roughness: 0.4, metalness: 0.85 });
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.46), body); receiver.position.set(0, 0, -0.12);
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.3), accent); barrel.position.set(0, 0.02, -0.46);
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.1), body); mag.position.set(0, -0.2, -0.04); mag.rotation.x = -0.12;
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.2, 0.11), body); grip.position.set(0, -0.16, 0.12); grip.rotation.x = 0.3;
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.22), accent); stock.position.set(0, -0.02, 0.26);
+    this.group.add(receiver, barrel, mag, grip, stock);
+    this._muzzlePos = new THREE.Vector3(0, 0.02, -0.6);
+  }
+
+  _buildRifle() {
+    const body = new THREE.MeshStandardMaterial({ color: 0x23241f, roughness: 0.55, metalness: 0.6 });
+    const metal = new THREE.MeshStandardMaterial({ color: 0x32352b, roughness: 0.35, metalness: 0.85 });
+    const scopeMat = new THREE.MeshStandardMaterial({ color: 0x0a0c0a, roughness: 0.3, metalness: 0.9 });
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.13, 0.62), body); receiver.position.set(0, 0, -0.16);
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.5), metal); barrel.position.set(0, 0.01, -0.62);
+    const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.22, 10), scopeMat); scope.rotation.x = Math.PI / 2; scope.position.set(0, 0.11, -0.18);
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.12), body); mag.position.set(0, -0.16, 0.0);
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.3), body); stock.position.set(0, -0.04, 0.26); stock.rotation.x = 0.12;
+    this.group.add(receiver, barrel, scope, mag, stock);
+    this._muzzlePos = new THREE.Vector3(0, 0.01, -0.86);
   }
 
   setVisible(v) { this.group.visible = v; }
@@ -157,8 +184,9 @@ export class Weapon {
   _muzzle() {
     this.flash.material.opacity = 0.95;
     this.flash.rotation.z = Math.random() * Math.PI;
-    this.flash.scale.setScalar(this.cfg.type === 'shotgun' ? 1.4 : 1);
-    this.muzzleLight.intensity = this.cfg.type === 'shotgun' ? 7 : 5;
+    const fs = { shotgun: 1.4, rifle: 1.25, smg: 0.8, pistol: 1 }[this.cfg.type] || 1;
+    this.flash.scale.setScalar(fs);
+    this.muzzleLight.intensity = { shotgun: 7, rifle: 6.5, smg: 4, pistol: 5 }[this.cfg.type] || 5;
   }
 
   _ignored(obj) { let o = obj; while (o) { if (o.userData && o.userData.noHit) return true; o = o.parent; } return false; }

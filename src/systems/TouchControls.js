@@ -24,6 +24,7 @@ export class TouchControls {
       <div id="joystick"><div id="joy-knob"></div></div>
       <div id="touch-buttons">
         <button id="t-swap" class="t-btn t-small">SWAP</button>
+        <button id="t-nade" class="t-btn t-small">NADE</button>
         <button id="t-reload" class="t-btn t-small">RELOAD</button>
         <button id="t-jump" class="t-btn t-small">JUMP</button>
         <button id="t-fire" class="t-btn t-fire">FIRE</button>
@@ -109,6 +110,7 @@ export class TouchControls {
 
     this.root.querySelector('#t-reload').addEventListener('touchstart', (e) => { stop(e); this.input.triggerReload(); });
     this.root.querySelector('#t-swap').addEventListener('touchstart', (e) => { stop(e); this.input.triggerSwap(); });
+    this.root.querySelector('#t-nade').addEventListener('touchstart', (e) => { stop(e); if (this.input.onGrenade) this.input.onGrenade(); });
   }
 
   _joyMove(t, rect) {

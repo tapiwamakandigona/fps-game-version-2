@@ -35,7 +35,7 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 
 ## v2.12+ backlog (Jake approved 2026-06-13: "all of these yes add")
 - [x] v2.12 Juice pass: screen shake, impact sparks, hit-stop
-- [ ] v2.13 More weapons: SMG + rifle + grenade, with loadout/weapon-wheel
+- [x] v2.13 More weapons: SMG + rifle + throwable grenade (keys 3/4/G)
 - [ ] v2.14 Enemy variety: ranged spitter + exploder
 - [ ] v2.15 Second arena / new level layout
 - [ ] v2.16 Between-wave upgrade shop (spend score)
