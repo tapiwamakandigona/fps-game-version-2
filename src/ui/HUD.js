@@ -8,6 +8,8 @@ export class HUD {
     this.waveVal = $('wave-val');
     this.healthFill = $('health-fill');
     this.healthText = $('health-text');
+    this.staminaBar = $('stamina-bar');
+    this.staminaFill = $('stamina-fill');
     this.ammoName = $('ammo-name');
     this.ammoMag = $('ammo-mag');
     this.ammoMax = $('ammo-max');
@@ -31,6 +33,13 @@ export class HUD {
       ? 'linear-gradient(90deg,#39d98a,#6ef0a8)'
       : pct > 25 ? 'linear-gradient(90deg,#e3b341,#f5d06b)'
       : 'linear-gradient(90deg,#e3493b,#ff7a6b)';
+  }
+
+  setStamina(frac, exhausted) {
+    if (!this.staminaFill) return;
+    this.staminaFill.style.width = Math.max(0, Math.min(100, frac * 100)) + '%';
+    this.staminaBar.classList.toggle('full', frac >= 0.999);
+    this.staminaBar.classList.toggle('exhausted', !!exhausted);
   }
 
   setAmmo(mag, max, reserve) {

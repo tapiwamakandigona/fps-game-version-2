@@ -3,6 +3,9 @@ import { ARENA_HALF } from '../world/Warehouse.js';
 
 const GRAVITY = 22;
 const EYE = 1.7;
+const STAMINA_DRAIN = 1 / 4.5;   // empties in ~4.5s of sprinting
+const STAMINA_REGEN = 1 / 6.0;   // refills in ~6s of rest
+const EXHAUST_RECOVER = 0.35;    // must recover to this before sprinting again
 
 export class Player {
   constructor(camera, colliders) {
@@ -20,12 +23,23 @@ export class Player {
     this._right = new THREE.Vector3();
     this._regenT = 0;
     this.onHurt = null; // callback(amount)
+    // game-feel state
+    this.eyeY = EYE;          // physics eye height (jump/gravity act on this)
+    this.stamina = 1;         // 0..1
+    this.sprinting = false;
+    this._exhausted = false;
+    this._bobPhase = 0;
+    this._bobAmp = 0;
+    this._landDip = 0;
+    this.onLand = null;       // callback(strength 0..1)
   }
 
   spawn(pos) {
     this.camera.position.set(pos.x, EYE, pos.z);
     this.health = this.maxHealth;
     this.velY = 0; this.alive = true; this._regenT = 0;
+    this.eyeY = EYE; this.stamina = 1; this.sprinting = false; this._exhausted = false;
+    this._bobPhase = 0; this._bobAmp = 0; this._landDip = 0; this.onGround = true;
   }
 
   update(dt, input) {
@@ -39,18 +53,49 @@ export class Player {
     let mx = mv.x, mz = mv.z;
     const len = Math.hypot(mx, mz);
     const pos = this.camera.position;
-    if (len > 0.001) {
-      const spd = this.speed * (input.sprint ? this.sprintMul : 1) * dt;
+    const moving = len > 0.001;
+
+    // sprint gated by stamina (with exhaustion hysteresis so it can't stutter)
+    const wantSprint = input.sprint && moving && this.onGround &&
+      !this._exhausted && this.stamina > 0.02;
+    this.sprinting = wantSprint;
+    if (wantSprint) {
+      this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN * dt);
+      if (this.stamina <= 0) this._exhausted = true;
+    } else {
+      this.stamina = Math.min(1, this.stamina + STAMINA_REGEN * dt);
+      if (this._exhausted && this.stamina >= EXHAUST_RECOVER) this._exhausted = false;
+    }
+
+    if (moving) {
+      const spd = this.speed * (wantSprint ? this.sprintMul : 1) * dt;
       pos.x += (this._fwd.x * mz + this._right.x * mx) * spd;
       pos.z += (this._fwd.z * mz + this._right.z * mx) * spd;
       this._resolve(pos);
     }
 
-    // jump + gravity
+    // jump + gravity (act on eyeY; camera.y gets visual bob/dip layered on after)
     if (input.jump && this.onGround) { this.velY = 8.2; this.onGround = false; }
     this.velY -= GRAVITY * dt;
-    pos.y += this.velY * dt;
-    if (pos.y <= EYE) { pos.y = EYE; this.velY = 0; this.onGround = true; }
+    this.eyeY += this.velY * dt;
+    if (this.eyeY <= EYE) {
+      const impact = this.velY;        // negative = falling
+      this.eyeY = EYE; this.velY = 0;
+      if (!this.onGround && impact < -3) {
+        const strength = Math.min(1, -impact / 12);
+        this._landDip = Math.max(this._landDip, 0.05 + strength * 0.16);
+        if (this.onLand) this.onLand(strength);
+      }
+      this.onGround = true;
+    }
+
+    // view bob while moving on the ground; springy landing dip
+    const targetAmp = (moving && this.onGround) ? (this.sprinting ? 0.085 : 0.05) : 0;
+    this._bobAmp += (targetAmp - this._bobAmp) * Math.min(1, dt * 8);
+    if (moving && this.onGround) this._bobPhase += dt * (this.sprinting ? 13 : 9);
+    const bobY = Math.sin(this._bobPhase) * this._bobAmp;
+    this._landDip *= Math.max(0, 1 - dt * 7);
+    pos.y = this.eyeY + bobY - this._landDip;
 
     // hard arena clamp (safety net beyond the wall colliders)
     const lim = ARENA_HALF - 0.8;

@@ -157,3 +157,13 @@ body.is-touch #score { font-size: 20px; }
   .set-row { grid-template-columns: 96px 1fr 48px; gap: 8px; }
   .settings-panel { min-width: 0; width: 92vw; }
 }
+
+/* ---------- Stamina bar (under the health bar) ---------- */
+#stamina-bar { position: absolute; left: 0; bottom: -9px; width: 220px; height: 5px;
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 3px; background: rgba(0,0,0,0.45);
+  overflow: hidden; opacity: 0.85; transition: opacity 0.25s; }
+#stamina-fill { height: 100%; width: 100%; background: linear-gradient(90deg,#46b4ff,#8fd6ff);
+  transition: width 0.08s linear; }
+#stamina-bar.full { opacity: 0.35; }
+#stamina-bar.exhausted #stamina-fill { background: linear-gradient(90deg,#e3a341,#f5cf6b); }
+body.is-touch #stamina-bar { width: 180px; }

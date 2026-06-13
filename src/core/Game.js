@@ -204,6 +204,7 @@ export class Game {
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
+      this.hud.setStamina(this.player.stamina, this.player._exhausted);
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);
       if (!this.player.alive) this._end(false);
     }

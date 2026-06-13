@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.8 — Game feel: stamina, view bob, landing
+- **Sprint stamina:** sprinting now drains a stamina meter (new bar under your health),
+  empties in ~4.5s, and you must recover to ~35% before sprinting again (no stutter-sprint).
+  Bar turns amber when exhausted, dims when full.
+- **View bob:** the camera (and weapon) bob naturally while walking, faster/deeper while
+  sprinting — stops when you stand still. Purely visual, doesn't affect aim or collision.
+- **Landing impact:** a springy camera dip when you land from a jump/fall, scaled by how
+  hard you hit the ground.
+
 ## v2.7 — Minimap (2026-06-13)
 - New **rotating minimap** in the top-right corner of the HUD, radar-style.
 - **Player** shown as a blue triangle at center; the map rotates with the camera
