@@ -76,9 +76,9 @@ export class Foundry {
   _buildMagma() {
     const strips = [
       { w: 44, d: 2.2, x: 0, z: -6 },
-      { w: 2.2, d: 30, x: -14, z: 4 },
-      { w: 2.2, d: 30, x: 14, z: 4 },
-      { w: 20, d: 2.2, x: 0, z: 16 },
+      { w: 2.2, d: 26, x: -14, z: 2 },
+      { w: 2.2, d: 26, x: 14, z: 2 },
+      { w: 16, d: 2.2, x: 0, z: 10 },
     ];
     for (const s of strips) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(s.w, s.d), this.matMagma);
@@ -137,10 +137,10 @@ export class Foundry {
   }
 
   _buildLights() {
-    this.root.add(new THREE.AmbientLight(0x52443a, 0.9));
-    this.root.add(new THREE.HemisphereLight(0xb88a5a, 0x241a14, 0.8));
+    this.root.add(new THREE.AmbientLight(0x6a5a4c, 1.5));
+    this.root.add(new THREE.HemisphereLight(0xcaa472, 0x3a2c20, 1.25));
 
-    const sun = new THREE.DirectionalLight(0xffe0c0, 1.15);
+    const sun = new THREE.DirectionalLight(0xffe8cc, 1.7);
     sun.position.set(8, 20, -4);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -152,12 +152,12 @@ export class Foundry {
     this.root.add(sun); this.root.add(sun.target);
 
     // Cold overhead work-lamps for visibility (and to contrast the magma).
-    const lampMat = new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0x8fb6ff, emissiveIntensity: 3.2 });
-    for (const [x, z] of [[-10, -10], [10, -10], [0, 4], [-10, 12], [10, 12]]) {
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0xdfeeff, emissive: 0xaecbff, emissiveIntensity: 3.6 });
+    for (const [x, z] of [[-11, -12], [11, -12], [0, 0], [-11, 14], [11, 14], [0, -20], [0, 20]]) {
       const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.25, 16), lampMat);
       disc.position.set(x, 8.3, z);
       this.root.add(disc);
-      const pl = new THREE.PointLight(0xbcd6ff, 16, 28, 2);
+      const pl = new THREE.PointLight(0xcfe2ff, 26, 32, 2);
       pl.position.set(x, 7.9, z);
       this.root.add(pl);
     }
