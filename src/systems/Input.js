@@ -1,13 +1,23 @@
-// Keyboard + mouse-button state. Mouse-look is handled by PointerLockControls.
+// Keyboard + mouse + touch state.
+// Desktop look is handled by PointerLockControls; touch look feeds lookDX/lookDY
+// which Game applies to the camera each frame.
 export class Input {
   constructor() {
     this.keys = new Set();
     this.mouseDown = false;
-    this.onShoot = null;   // callback on left-press
+    this.onShoot = null;   // callback on press
     this.onReload = null;
     this.onPause = null;
-    this.onSwitch = null;     // callback(index) on number keys
-    this.onSwitchNext = null; // callback() on mouse wheel
+    this.onSwitch = null;     // callback(index)
+    this.onSwitchNext = null; // callback()
+
+    // touch / analog state
+    this.axisX = 0;        // -1..1 strafe (from virtual stick)
+    this.axisZ = 0;        // -1..1 forward
+    this.touchSprint = false;
+    this._touchJump = false;
+    this.lookDX = 0;       // accumulated yaw delta (consumed each frame)
+    this.lookDY = 0;       // accumulated pitch delta
 
     this._enabled = false;
 
@@ -29,15 +39,41 @@ export class Input {
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
     window.addEventListener('wheel', () => { if (this._enabled && this.onSwitchNext) this.onSwitchNext(); }, { passive: true });
-    window.addEventListener('blur', () => { this.keys.clear(); this.mouseDown = false; });
+    window.addEventListener('blur', () => { this.keys.clear(); this.mouseDown = false; this.axisX = 0; this.axisZ = 0; });
   }
 
-  setEnabled(v) { this._enabled = v; if (!v) { this.keys.clear(); this.mouseDown = false; } }
+  setEnabled(v) {
+    this._enabled = v;
+    if (!v) { this.keys.clear(); this.mouseDown = false; this.axisX = 0; this.axisZ = 0; this._touchJump = false; }
+  }
+
+  // --- touch hooks (called by TouchControls) ---
+  fireDown() { this.mouseDown = true; if (this._enabled && this.onShoot) this.onShoot(); }
+  fireUp() { this.mouseDown = false; }
+  triggerReload() { if (this._enabled && this.onReload) this.onReload(); }
+  triggerSwap() { if (this._enabled && this.onSwitchNext) this.onSwitchNext(); }
+  setJump(v) { this._touchJump = v; }
+  addLook(dx, dy) { this.lookDX += dx; this.lookDY += dy; }
+  consumeLook() { const x = this.lookDX, y = this.lookDY; this.lookDX = 0; this.lookDY = 0; return { x, y }; }
+
   isDown(code) { return this.keys.has(code); }
   get forward() { return this.isDown('KeyW') || this.isDown('ArrowUp'); }
   get back() { return this.isDown('KeyS') || this.isDown('ArrowDown'); }
   get left() { return this.isDown('KeyA') || this.isDown('ArrowLeft'); }
   get right() { return this.isDown('KeyD') || this.isDown('ArrowRight'); }
-  get sprint() { return this.isDown('ShiftLeft') || this.isDown('ShiftRight'); }
-  get jump() { return this.isDown('Space'); }
+  get sprint() { return this.isDown('ShiftLeft') || this.isDown('ShiftRight') || this.touchSprint; }
+  get jump() { return this.isDown('Space') || this._touchJump; }
+
+  // Combined digital + analog movement, normalised to max length 1.
+  moveAxis() {
+    let x = 0, z = 0;
+    if (this.forward) z += 1;
+    if (this.back) z -= 1;
+    if (this.right) x += 1;
+    if (this.left) x -= 1;
+    x += this.axisX; z += this.axisZ;
+    const len = Math.hypot(x, z);
+    if (len > 1) { x /= len; z /= len; }
+    return { x, z };
+  }
 }

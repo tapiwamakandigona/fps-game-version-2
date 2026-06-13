@@ -35,15 +35,11 @@ export class Player {
     this._fwd.y = 0; this._fwd.normalize();
     this._right.crossVectors(this._fwd, THREE.Object3D.DEFAULT_UP).normalize();
 
-    let mx = 0, mz = 0;
-    if (input.forward) mz += 1;
-    if (input.back) mz -= 1;
-    if (input.right) mx += 1;
-    if (input.left) mx -= 1;
+    const mv = input.moveAxis ? input.moveAxis() : { x: 0, z: 0 };
+    let mx = mv.x, mz = mv.z;
     const len = Math.hypot(mx, mz);
     const pos = this.camera.position;
-    if (len > 0) {
-      mx /= len; mz /= len;
+    if (len > 0.001) {
       const spd = this.speed * (input.sprint ? this.sprintMul : 1) * dt;
       pos.x += (this._fwd.x * mz + this._right.x * mx) * spd;
       pos.z += (this._fwd.z * mz + this._right.z * mx) * spd;

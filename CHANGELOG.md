@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.4 — Mobile support
+- **Phones can play now.** On touch devices the game shows an on-screen *left
+  virtual stick* (move), *drag the right side* to look, and *FIRE / JUMP / RELOAD /
+  SWAP* buttons. Pointer-lock is skipped on touch — tap **TAP TO PLAY** to start.
+- Movement is analog (push the stick further to sprint); look is smooth drag.
+- Performance held at the 60 FPS target (draw calls + per-frame work benchmarked).
+
 ## v2.3 — Enemy variants
 - Two new enemy types mixed into the waves: a fast, fragile **Runner** (yellow-green,
   from wave 2) and a slow, hulking **Brute** (dark red, high HP + heavy hits, from

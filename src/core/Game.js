@@ -6,6 +6,7 @@ import { Player } from '../entities/Player.js';
 import { WeaponManager } from '../weapons/WeaponManager.js';
 import { EnemyManager, TOTAL_WAVES } from '../entities/EnemyManager.js';
 import { Input } from '../systems/Input.js';
+import { TouchControls, isTouchDevice } from '../systems/TouchControls.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
 
@@ -17,6 +18,9 @@ export class Game {
     this.hud = new HUD();
     this.input = new Input();
     this.audio = new Audio();
+    this.touch = isTouchDevice();
+    this.touchControls = new TouchControls(this.input, document.getElementById('game-container'));
+    this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this.controls = new PointerLockControls(this.engine.camera, this.engine.renderer.domElement);
     // Camera must live in the scene graph so the weapon viewmodel (a child of the
     // camera) gets rendered.
@@ -32,6 +36,7 @@ export class Game {
     this._wireButtons();
 
     this.hud.hideLoading();
+    if (this.touch) this._applyTouchMenu();
     this.hud.showMenu(this.best);
     this.engine.camera.position.copy(this.world.playerSpawn);
 
@@ -77,7 +82,27 @@ export class Game {
     document.getElementById('restart-btn').addEventListener('click', () => { this.hud.hideEnd(); this._requestLock(); });
   }
 
-  _requestLock() { this.audio.resume(); try { this.controls.lock(); } catch (e) {} }
+  _applyTouchMenu() {
+    const sb = document.getElementById('start-btn');
+    if (sb) sb.textContent = 'TAP TO PLAY';
+    document.body.classList.add('is-touch');
+    const help = document.querySelector('.controls-help');
+    if (help) help.innerHTML =
+      '<span><b>Left stick</b> move</span><span><b>Drag right</b> look</span>' +
+      '<span><b>FIRE</b> shoot</span><span><b>JUMP</b> / <b>RELOAD</b></span>' +
+      '<span><b>SWAP</b> weapon</span>';
+  }
+
+  _requestLock() {
+    this.audio.resume();
+    // Touch devices have no pointer lock — start/resume directly.
+    if (this.touch) {
+      if (this.state === 'menu' || this.state === 'over') this._startRun();
+      else if (this.state === 'paused') { this.state = 'playing'; this.hud.showPause(false); this.input.setEnabled(true); this.touchControls.setEnabled(true); }
+      return;
+    }
+    try { this.controls.lock(); } catch (e) {}
+  }
 
   _startRun() {
     this.hud.hideMenu(); this.hud.hideEnd();
@@ -88,6 +113,7 @@ export class Game {
     this.hud.setHealth(this.player.health, this.player.maxHealth);
     this.hud.showHud(true);
     this.input.setEnabled(true);
+    if (this.touch) this.touchControls.setEnabled(true);
     this.state = 'playing';
     this.enemies.start();
   }
@@ -96,12 +122,25 @@ export class Game {
     if (this.state === 'over') return;
     this.state = 'over';
     this.input.setEnabled(false);
+    this.touchControls.setEnabled(false);
     try { this.controls.unlock(); } catch (e) {}
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; localStorage.setItem(HS_KEY, String(this.best)); }
     if (victory) this.audio.victory(); else this.audio.gameover();
     this.hud.showHud(false);
     this.hud.showEnd({ victory, score: this.score, best: this.best, newBest });
+  }
+
+  _applyTouchLook() {
+    const { x, y } = this.input.consumeLook();
+    if (!x && !y) return;
+    const cam = this.engine.camera;
+    this._euler.setFromQuaternion(cam.quaternion);
+    this._euler.y -= x;
+    this._euler.x -= y;
+    const lim = Math.PI / 2 - 0.02;
+    this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
+    cam.quaternion.setFromEuler(this._euler);
   }
 
   _loop() {
@@ -112,6 +151,7 @@ export class Game {
     this.world.update(t);
 
     if (this.state === 'playing') {
+      if (this.touch) this._applyTouchLook();
       this.player.update(dt, this.input);
       this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
