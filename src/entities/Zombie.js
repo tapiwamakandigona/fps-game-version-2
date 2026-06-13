@@ -16,7 +16,10 @@ export class Zombie {
     this.health = this.maxHealth;
     this.speed = opts.speed ?? 1.8;
     this.damage = opts.damage ?? 12;
-    this.radius = 0.42;
+    this.variant = opts.variant ?? 'normal';
+    this.scoreValue = opts.score ?? 100;
+    this.scaleF = opts.scale ?? 1;
+    this.radius = 0.42 * this.scaleF;
     this.alive = true;
     this.dead = false;          // fully finished (ready to remove)
     this.attackCd = 0;
@@ -28,8 +31,12 @@ export class Zombie {
   }
 
   _build() {
-    const skin = new THREE.MeshStandardMaterial({ color: 0x5a7a4a, roughness: 0.85, metalness: 0.0 });
-    const cloth = new THREE.MeshStandardMaterial({ color: 0x2c3340, roughness: 0.95, metalness: 0.0 });
+    // Per-variant tint so the three enemy types read at a glance.
+    const tint = this.variant === 'runner' ? { skin: 0x97b14a, cloth: 0x3a2c1c }
+      : this.variant === 'brute' ? { skin: 0x7a3a34, cloth: 0x241c1c }
+      : { skin: 0x5a7a4a, cloth: 0x2c3340 };
+    const skin = new THREE.MeshStandardMaterial({ color: tint.skin, roughness: 0.85, metalness: 0.0 });
+    const cloth = new THREE.MeshStandardMaterial({ color: tint.cloth, roughness: 0.95, metalness: 0.0 });
     this._mats = [skin, cloth];
 
     const g = new THREE.Group();
@@ -51,6 +58,7 @@ export class Zombie {
     g.traverse((o) => { o.userData.zombie = this; });
     head.userData.part = 'head';
 
+    if (this.scaleF !== 1) g.scale.setScalar(this.scaleF);
     this.group = g;
     this.scene.add(g);
   }

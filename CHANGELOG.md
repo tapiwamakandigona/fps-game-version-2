@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3 — Enemy variants
+- Two new enemy types mixed into the waves: a fast, fragile **Runner** (yellow-green,
+  from wave 2) and a slow, hulking **Brute** (dark red, high HP + heavy hits, from
+  wave 3). Each is colour- and size-coded so you can read the threat instantly, and
+  brutes are worth more points.
+
 ## v2.2 — Weapons & feedback
 - New weapon system: switch between **Pistol** (auto, precise) and **Shotgun**
   (8-pellet spread, pump-action) with **1 / 2** keys or the **mouse wheel**.

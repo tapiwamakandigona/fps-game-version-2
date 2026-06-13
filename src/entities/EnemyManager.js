@@ -57,15 +57,38 @@ export class EnemyManager {
       const d = (c.x - p.x) ** 2 + (c.z - p.z) ** 2;
       if (d > bestD) { bestD = d; best = c; }
     }
-    const z = new Zombie(this.scene, this.player, this.colliders, this._stats);
+    const z = new Zombie(this.scene, this.player, this.colliders, this._variantStats());
     z.spawn({ x: best.x + (Math.random() - 0.5) * 3, z: best.z + (Math.random() - 0.5) * 3 });
     z.onDeath = (zz) => this._onKill(zz);
     this.zombies.push(z);
   }
 
+  // Mix in runner/brute variants as waves progress.
+  _pickVariant(w) {
+    const r = Math.random();
+    if (w >= 3 && r < 0.12 + (w - 3) * 0.05) return 'brute';   // tanky, from wave 3
+    if (w >= 2 && r < 0.45) return 'runner';                    // fast, from wave 2
+    return 'normal';
+  }
+
+  _variantStats() {
+    const s = this._stats;
+    const w = this.wave;
+    const v = this._pickVariant(w);
+    const base = 100 + (w - 1) * 20;
+    if (v === 'runner') {
+      return { variant: 'runner', scale: 0.85, health: s.health * 0.55, speed: s.speed * 1.7,
+        damage: s.damage * 0.8, score: base + 30 };
+    }
+    if (v === 'brute') {
+      return { variant: 'brute', scale: 1.4, health: s.health * 2.6, speed: s.speed * 0.62,
+        damage: s.damage * 1.8, score: base + 80 };
+    }
+    return { variant: 'normal', scale: 1, health: s.health, speed: s.speed, damage: s.damage, score: base };
+  }
+
   _onKill(z) {
-    const score = 100 + (this.wave - 1) * 20;
-    if (this.onKill) this.onKill(z, score);
+    if (this.onKill) this.onKill(z, z.scoreValue ?? 100);
   }
 
   get aliveCount() { let n = 0; for (const z of this.zombies) if (z.alive) n++; return n; }

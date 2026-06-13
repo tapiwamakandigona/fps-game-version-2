@@ -24,7 +24,7 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [ ] Minimap / enemy direction indicators on the HUD
 - [ ] Sprint stamina + view bob + landing impact for game feel
 - [ ] Damage numbers floating off enemies; kill streak / combo scoring
-- [ ] A "runner" zombie variant (fast, low HP) and a "brute" (slow, high HP)
+- [x] v2.3 "Runner" (fast, low HP) + "Brute" (slow, tanky, high-damage) zombie variants
 - [ ] Boss on wave 5 (port/upgrade the v1 BossEnemy idea) with a health bar
 - [ ] Settings panel: mouse sensitivity, master volume, bloom/quality toggle
 - [ ] Mobile/touch controls (virtual stick + fire button), like fps-game v1
