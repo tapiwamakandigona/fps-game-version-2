@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FPS Arena v2 — Warehouse</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.161.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="crosshair">
+        <span class="ch ch-t"></span><span class="ch ch-b"></span>
+        <span class="ch ch-l"></span><span class="ch ch-r"></span>
+      </div>
+      <div id="score">SCORE: <span id="score-val">0</span></div>
+      <div id="wave-indicator">WAVE <span id="wave-val">1</span> / 5</div>
+      <div id="health">
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <span id="health-text">100/100 HP</span>
+      </div>
+      <div id="ammo">
+        <div id="ammo-name">PISTOL</div>
+        <div id="ammo-counts"><span id="ammo-mag">12</span>/<span id="ammo-max">12</span> <span class="reload-key">[R]</span></div>
+        <div id="ammo-reserve">Reserve: <span id="ammo-res">∞</span></div>
+      </div>
+      <div id="center-msg"></div>
+      <div id="hitmarker"></div>
+      <div id="damage-vignette"></div>
+    </div>
+
+    <!-- Menus -->
+    <div id="menu" class="overlay">
+      <div class="panel">
+        <h1>FPS ARENA</h1>
+        <h2>WAREHOUSE: CONTAINMENT</h2>
+        <p class="tagline">Survive 5 waves. Clear them all to win.</p>
+        <button id="start-btn">CLICK TO PLAY</button>
+        <div class="controls-help">
+          <span><b>WASD</b> move</span><span><b>Mouse</b> look</span><span><b>Click</b> shoot</span>
+          <span><b>R</b> reload</span><span><b>Shift</b> sprint</span><span><b>Space</b> jump</span><span><b>Esc</b> pause</span>
+        </div>
+        <p class="best">Best: <span id="menu-best">—</span></p>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="panel">
+        <h2>PAUSED</h2>
+        <button id="resume-btn">RESUME</button>
+      </div>
+    </div>
+
+    <div id="endscreen" class="overlay hidden">
+      <div class="panel">
+        <h1 id="end-title">GAME OVER</h1>
+        <p id="end-sub"></p>
+        <p class="score-line">Score: <span id="end-score">0</span></p>
+        <p class="best-line" id="end-best"></p>
+        <button id="restart-btn">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <div id="loading" class="overlay">
+      <div class="panel"><h2>Loading…</h2><p class="tagline">Fetching engine</p></div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
