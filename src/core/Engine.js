@@ -44,10 +44,26 @@ export class Engine {
     window.addEventListener('resize', () => this.onResize());
   }
 
+  setExposure(v) { this.renderer.toneMappingExposure = v; }
+
+  // Quality presets — let weak devices (esp. phones) drop the expensive bits.
+  // low: no bloom, no shadows, 1x pixels · med: bloom+shadows, 1.25x · high: 1.5x
+  setQuality(q) {
+    this.quality = q;
+    const pr = q === 'low' ? 1.0 : q === 'med' ? 1.25 : 1.5;
+    this.maxPixelRatio = pr;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, pr));
+    this.bloom.enabled = q !== 'low';
+    this.renderer.shadowMap.enabled = q !== 'low';
+    this.renderer.shadowMap.needsUpdate = true;
+    this.onResize();
+  }
+
   onResize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.maxPixelRatio || 1.5));
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
     this.bloom.setSize(w / 2, h / 2);

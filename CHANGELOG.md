@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.5 — Settings panel
+- New **SETTINGS** panel (from the menu or pause): **Brightness** slider, **Quality**
+  presets (**Low / Med / High** — Low drops bloom + shadows and pixel ratio so weak
+  phones stay smooth), **Look sensitivity**, and **Volume**. All persist via localStorage.
+- Phones default to the lighter **Med** preset on first run for a steady 60 FPS.
+
 ## v2.4 — Mobile support
 - **Phones can play now.** On touch devices the game shows an on-screen *left
   virtual stick* (move), *drag the right side* to look, and *FIRE / JUMP / RELOAD /

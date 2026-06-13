@@ -7,6 +7,8 @@ import { WeaponManager } from '../weapons/WeaponManager.js';
 import { EnemyManager, TOTAL_WAVES } from '../entities/EnemyManager.js';
 import { Input } from '../systems/Input.js';
 import { TouchControls, isTouchDevice } from '../systems/TouchControls.js';
+import { Settings } from '../systems/Settings.js';
+import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
 
@@ -33,6 +35,13 @@ export class Game {
 
     this._buildWorld();
     this._wireControls();
+
+    // Settings (brightness/quality/sensitivity/volume) — apply before first frame.
+    const container = document.getElementById('game-container');
+    this.settings = new Settings(this);
+    this.settingsPanel = new SettingsPanel(this.settings, container, () => this._closeSettings());
+    this.settings.apply();
+
     this._wireButtons();
 
     this.hud.hideLoading();
@@ -80,6 +89,21 @@ export class Game {
     document.getElementById('start-btn').addEventListener('click', () => this._requestLock());
     document.getElementById('resume-btn').addEventListener('click', () => this._requestLock());
     document.getElementById('restart-btn').addEventListener('click', () => { this.hud.hideEnd(); this._requestLock(); });
+    const sm = document.getElementById('settings-btn');
+    const sp = document.getElementById('settings-btn-pause');
+    if (sm) sm.addEventListener('click', () => this._openSettings('menu'));
+    if (sp) sp.addEventListener('click', () => this._openSettings('pause'));
+  }
+
+  _openSettings(from) {
+    this._settingsFrom = from;
+    document.getElementById(from === 'pause' ? 'pause' : 'menu').classList.add('hidden');
+    this.settingsPanel.open();
+  }
+
+  _closeSettings() {
+    if (this._settingsFrom === 'pause') document.getElementById('pause').classList.remove('hidden');
+    else document.getElementById('menu').classList.remove('hidden');
   }
 
   _applyTouchMenu() {

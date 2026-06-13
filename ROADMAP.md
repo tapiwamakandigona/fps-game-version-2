@@ -19,15 +19,15 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.1 Performance pass (shadow map size, bloom res, pixel-ratio clamp, fewer shadow casters)
 - [x] v2.2 Tracer rounds + muzzle-origin bullet feedback
 - [x] v2.2 Second weapon (shotgun, 8-pellet spread) + 1/2 + mouse-wheel switching
-- [ ] In-game brightness/quality slider so players can tune to their display
+- [x] v2.5 In-game brightness slider + quality presets (Low/Med/High)
 - [ ] Ammo/health pickups dropped by zombies; pickup pacing tuning
 - [ ] Minimap / enemy direction indicators on the HUD
 - [ ] Sprint stamina + view bob + landing impact for game feel
 - [ ] Damage numbers floating off enemies; kill streak / combo scoring
 - [x] v2.3 "Runner" (fast, low HP) + "Brute" (slow, tanky, high-damage) zombie variants
 - [ ] Boss on wave 5 (port/upgrade the v1 BossEnemy idea) with a health bar
-- [ ] Settings panel: mouse sensitivity, master volume, bloom/quality toggle
-- [ ] Mobile/touch controls (virtual stick + fire button), like fps-game v1
+- [x] v2.5 Settings panel: brightness, quality, look sensitivity, volume (persisted)
+- [x] v2.4 Mobile/touch controls (virtual stick + fire button)
 - [ ] Performance: instanced meshes for crates, frustum-culled zombie updates
 - [ ] Reduce first-load by self-hosting a pinned Three.js build instead of CDN
 
