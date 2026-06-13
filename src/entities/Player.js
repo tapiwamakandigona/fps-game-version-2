@@ -57,11 +57,11 @@ export class Player {
 
     // sprint gated by stamina (with exhaustion hysteresis so it can't stutter)
     const wantSprint = input.sprint && moving && this.onGround &&
-      !this._exhausted && this.stamina > 0.02;
+      !this._exhausted && this.stamina > 0;
     this.sprinting = wantSprint;
     if (wantSprint) {
       this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN * dt);
-      if (this.stamina <= 0) this._exhausted = true;
+      if (this.stamina <= 0.02) this._exhausted = true;
     } else {
       this.stamina = Math.min(1, this.stamina + STAMINA_REGEN * dt);
       if (this._exhausted && this.stamina >= EXHAUST_RECOVER) this._exhausted = false;
