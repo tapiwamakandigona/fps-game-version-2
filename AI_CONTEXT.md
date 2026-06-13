@@ -46,15 +46,17 @@ Wave survival in a single enclosed warehouse. 5 waves, escalating zombie count/s
 Clear all waves → **VICTORY**. Die → **GAME OVER**. High score persisted in localStorage.
 This intentionally fixes v1's "endless level with unreachable victory()" bug.
 
-## Status / TODO (update as you go)
-- [ ] Engine + scene + post-processing
-- [ ] Warehouse geometry + PBR materials + lights + colliders
-- [ ] Player controller + collision
-- [ ] Pistol shooting (hitscan) + muzzle flash + ammo/reload
-- [ ] Zombies + wave manager + win/lose
-- [ ] HUD + menu + end screens + audio
-- [ ] Local render test (no console errors), then deploy to GitHub Pages
-- [ ] (Nice-to-have) mobile touch controls + quality presets (disable bloom/shadows on mobile)
+## Status (shipped — see CHANGELOG.md + ROADMAP.md)
+- v2.0 base game complete and live; v2.1 brightness + perf pass; v2.2 weapon system
+  (Pistol + Shotgun, 1/2/wheel switch, tracer rounds); v2.3 enemy variants (runner/brute).
+- Weapons now live in `weapons/Weapon.js` (generic hitscan, pellets + tracers) +
+  `weapons/WeaponManager.js` (switching). The old `weapons/Pistol.js` is removed.
+- Zombie variants: `entities/Zombie.js` takes opts.variant/scale/score; the mix is
+  decided in `entities/EnemyManager.js` `_variantStats()`.
+- DEVELOPMENT IS STUDIO-DRIVEN: pick the top unchecked ROADMAP.md item each cycle,
+  ship ONE tested increment, deploy, keep the game bright + performant, never break main.
+- Testing: the browser is REMOTE (can't hit sandbox localhost) — always test on the
+  live Pages URL via window.__game internals (._startRun(), .weapons, .enemies).
 
 ## Conventions
 - Keep it buildless and dependency-light. One concept per module. No secrets in repo.
