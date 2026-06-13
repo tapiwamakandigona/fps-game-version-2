@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.15 — Second arena: The Foundry
+- New playable map: **FOUNDRY: MELTDOWN** — dark riveted steel hall with glowing magma
+  channels cut into the floor, towering furnace stacks in the corners, and cold overhead
+  work-lamps contrasting the molten orange glow. Same 24×24 footprint, fresh cover layout.
+- **Arena selector** on the main menu (◀ / ▶) — pick WAREHOUSE or FOUNDRY before you drop in.
+  Your choice is remembered between sessions.
+- Worlds are now fully swappable: the old map is disposed and the player/enemies rewire to the
+  new colliders + spawn points with no reload.
+
 ## v2.14 — Enemy variety: Spitter & Exploder
 - **Spitter** (sickly green, from wave 3) — hangs back at range and lobs glowing acid globs
   that arc toward you. They’re dodgeable, deal chip damage on hit, and the projectile pops on

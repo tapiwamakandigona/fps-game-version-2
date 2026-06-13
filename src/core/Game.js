@@ -2,6 +2,13 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
+import { Foundry } from '../world/Foundry.js';
+
+const ARENAS = [
+  { name: 'WAREHOUSE', cls: Warehouse, sub: 'WAREHOUSE: CONTAINMENT' },
+  { name: 'FOUNDRY', cls: Foundry, sub: 'FOUNDRY: MELTDOWN' },
+];
+const ARENA_KEY = 'fps-v2-arena';
 import { Player } from '../entities/Player.js';
 import { WeaponManager } from '../weapons/WeaponManager.js';
 import { GrenadeManager } from '../weapons/Grenade.js';
@@ -63,7 +70,8 @@ export class Game {
   }
 
   _buildWorld() {
-    this.world = new Warehouse(this.engine.scene);
+    this.arenaIdx = Math.min(ARENAS.length - 1, Math.max(0, Number(localStorage.getItem(ARENA_KEY) || 0)));
+    this.world = new ARENAS[this.arenaIdx].cls(this.engine.scene);
     this.player = new Player(this.engine.camera, this.world.colliders);
     this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
@@ -142,6 +150,30 @@ export class Game {
     this.input.onGrenade = () => { if (this.state === 'playing') this.grenadeMgr.throw(); };
   }
 
+  // Swap the arena from the menu. Disposes the old world and rewires the entities
+  // to the new colliders/spawns.
+  setArena(idx) {
+    if (this.state !== 'menu') return;
+    idx = ((idx % ARENAS.length) + ARENAS.length) % ARENAS.length;
+    if (idx === this.arenaIdx) return;
+    this.world.dispose();
+    this.arenaIdx = idx;
+    localStorage.setItem(ARENA_KEY, String(idx));
+    this.world = new ARENAS[idx].cls(this.engine.scene);
+    this.player.colliders = this.world.colliders;
+    this.enemies.warehouse = this.world;
+    this.enemies.colliders = this.world.colliders;
+    this.engine.camera.position.copy(this.world.playerSpawn);
+    this._updateArenaLabel();
+  }
+
+  _updateArenaLabel() {
+    const el = document.getElementById('arena-name');
+    if (el) el.textContent = ARENAS[this.arenaIdx].name;
+    const h2 = document.querySelector('#menu .panel h2');
+    if (h2) h2.textContent = ARENAS[this.arenaIdx].sub;
+  }
+
   _wireControls() {
     this.controls.addEventListener('lock', () => {
       if (this.state === 'menu' || this.state === 'over') this._startRun();
@@ -160,6 +192,11 @@ export class Game {
     const sp = document.getElementById('settings-btn-pause');
     if (sm) sm.addEventListener('click', () => this._openSettings('menu'));
     if (sp) sp.addEventListener('click', () => this._openSettings('pause'));
+    const ap = document.getElementById('arena-prev');
+    const an = document.getElementById('arena-next');
+    if (ap) ap.addEventListener('click', () => this.setArena(this.arenaIdx - 1));
+    if (an) an.addEventListener('click', () => this.setArena(this.arenaIdx + 1));
+    this._updateArenaLabel();
   }
 
   _openSettings(from) {

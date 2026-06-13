@@ -202,3 +202,12 @@ body.is-touch #boss-name { font-size: 14px; }
 /* ---------- Grenade counter ---------- */
 #ammo-nade { font-size: 13px; color: #9fd9a0; opacity: 0.92; margin-top: 1px; }
 #ammo-nade .reload-key { color: #6fae70; }
+
+/* ---------- Arena selector (menu) ---------- */
+#arena-select { display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 6px 0 14px; font-size: 15px; letter-spacing: 1px; color: #cfe0f5; }
+#arena-select #arena-name { color: #ffb347; font-weight: 700; }
+.arena-arrow { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+  color: #cfe0f5; width: 34px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  line-height: 1; padding: 0; transition: background 0.15s, border-color 0.15s; }
+.arena-arrow:hover { background: rgba(255,179,71,0.18); border-color: #ffb347; }

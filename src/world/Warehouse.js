@@ -8,6 +8,9 @@ export const ARENA_HALF = 24; // arena spans -24..24 on X and Z
 export class Warehouse {
   constructor(scene) {
     this.scene = scene;
+    this.root = new THREE.Group();
+    scene.add(this.root);
+    this.name = 'WAREHOUSE';
     this.colliders = [];        // THREE.Box3[]
     this.enemySpawns = [];      // THREE.Vector3[]
     this.lamps = [];            // fl:cker-able point lights
@@ -45,7 +48,7 @@ export class Warehouse {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(x, y, z);
     mesh.castShadow = shadow; mesh.receiveShadow = true;
-    this.scene.add(mesh);
+    this.root.add(mesh);
     if (collide) {
       const box = new THREE.Box3().setFromObject(mesh);
       this.colliders.push(box);
@@ -59,13 +62,13 @@ export class Warehouse {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(H * 2, H * 2), this.matFloor);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
-    this.scene.add(floor);
+    this.root.add(floor);
 
     // Ceiling
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(H * 2, H * 2), this.matWall);
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = 9;
-    this.scene.add(ceil);
+    this.root.add(ceil);
 
     // Outer walls (thickness 1, height 9)
     const t = 1, wallH = 9, yC = wallH / 2;
@@ -115,7 +118,7 @@ export class Warehouse {
         cratePos[i].clone().sub(half), cratePos[i].clone().add(half)));
     }
     crates.instanceMatrix.needsUpdate = true;
-    this.scene.add(crates);
+    this.root.add(crates);
 
     // Enemy spawn points (far half of the arena + corners).
     for (const p of [[-20, -20], [20, -20], [0, -21], [-21, 0], [21, 0], [-18, -10], [18, -10]]) {
@@ -130,7 +133,7 @@ export class Warehouse {
     g.add(body);
     g.position.set(x, 2.5, z);
     g.rotation.y = rotY;
-    this.scene.add(g);
+    this.root.add(g);
     g.updateMatrixWorld(true);
     body.updateMatrixWorld(true);
     // World-space AABB of the rotated container.
@@ -138,9 +141,9 @@ export class Warehouse {
   }
 
   _buildLights() {
-    this.scene.add(new THREE.AmbientLight(0x4a5468, 0.95));
+    this.root.add(new THREE.AmbientLight(0x4a5468, 0.95));
     const hemi = new THREE.HemisphereLight(0x9aa6bf, 0x2a2e36, 0.85);
-    this.scene.add(hemi);
+    this.root.add(hemi);
 
     // Key directional light (cold skylight through the roof) — casts shadows.
     const sun = new THREE.DirectionalLight(0xcfe0ff, 1.5);
@@ -152,8 +155,8 @@ export class Warehouse {
     sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 60;
     sun.shadow.bias = -0.0004;
-    this.scene.add(sun);
-    this.scene.add(sun.target);
+    this.root.add(sun);
+    this.root.add(sun.target);
 
     // Warm hanging lamp fixtures — emissive disc + point light (these bloom).
     const lampPositions = [[-10, -10], [10, -10], [0, 2], [-10, 10], [10, 10]];
@@ -161,18 +164,18 @@ export class Warehouse {
     for (const [x, z] of lampPositions) {
       const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.25, 16), lampMat);
       disc.position.set(x, 8.3, z);
-      this.scene.add(disc);
+      this.root.add(disc);
       const pl = new THREE.PointLight(0xffc080, 22, 30, 2);
       pl.position.set(x, 7.9, z);
       pl.castShadow = false;
-      this.scene.add(pl);
+      this.root.add(pl);
       this.lamps.push(pl);
     }
 
     // A bright cold accent at the spawn end to draw the eye down the warehouse.
     const accent = new THREE.PointLight(0x9cc3ff, 12, 32, 2);
     accent.position.set(0, 6, -ARENA_HALF + 4);
-    this.scene.add(accent);
+    this.root.add(accent);
   }
 
   // subtle lamp flicker for atmosphere
@@ -181,5 +184,18 @@ export class Warehouse {
       const l = this.lamps[i];
       l.intensity = 21 + Math.sin(t * 6 + i * 1.7) * 0.8 + (Math.random() < 0.02 ? -6 : 0);
     }
+  }
+
+  // Tear down every mesh/light/geometry so the arena can be swapped at the menu.
+  dispose() {
+    this.scene.remove(this.root);
+    this.root.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.isInstancedMesh && o.dispose) o.dispose();
+    });
+    for (const m of [this.matFloor, this.matWall, this.matMetal, this.matCrate, this.matContainer]) {
+      if (m) m.dispose();
+    }
+    this.colliders.length = 0; this.enemySpawns.length = 0; this.lamps.length = 0;
   }
 }
