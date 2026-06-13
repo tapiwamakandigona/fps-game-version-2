@@ -13,6 +13,9 @@ import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
 import { Minimap } from '../ui/Minimap.js';
+import { DamageNumbers } from '../ui/DamageNumbers.js';
+
+const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
 const HS_KEY = 'fps-v2-highscore';
 
@@ -63,16 +66,24 @@ export class Game {
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
     this.pickups = new PickupManager(this.engine.scene);
     this.pickups.onCollect = (type, amount) => this._onPickup(type, amount);
+    this.damageNumbers = new DamageNumbers(this.engine.camera, document.getElementById('hud'));
+    this.combo = 0; this.comboTimer = 0;
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); };
-    this.weapons.onHit = (z, headshot) => {
+    this.weapons.onHit = (z, headshot, point, dmg) => {
       this.hud.hitmark(headshot);
+      if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
     this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); };
     this.enemies.onIntermission = (next, secs) => this.hud.message(`WAVE CLEARED — next in ${secs}`, 1100);
     this.enemies.onKill = (z, sc) => {
-      this.score += sc; this.hud.setScore(this.score);
+      // combo: each kill within the window raises the points multiplier (caps at 3x)
+      this.combo++; this.comboTimer = COMBO_WINDOW;
+      const mult = Math.min(3, 1 + (this.combo - 1) * 0.25);
+      const award = Math.round(sc * mult);
+      this.score += award; this.hud.setScore(this.score);
+      if (this.combo >= 2) this.hud.setCombo(this.combo, mult);
       this.pickups.maybeDrop(z.group.position, z.variant);
     };
     this.enemies.onVictory = () => this._end(true);
@@ -141,6 +152,8 @@ export class Game {
     this.score = 0; this.hud.setScore(0);
     this.enemies.reset();
     this.pickups.reset();
+    this.damageNumbers.reset();
+    this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
     this.player.spawn(this.world.playerSpawn);
     this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
@@ -203,6 +216,11 @@ export class Game {
       this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
+      this.damageNumbers.update(dt);
+      if (this.combo > 0) {
+        this.comboTimer -= dt;
+        if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
+      }
       this.hud.setHealth(this.player.health, this.player.maxHealth);
       this.hud.setStamina(this.player.stamina, this.player._exhausted);
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);

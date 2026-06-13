@@ -167,3 +167,21 @@ body.is-touch #score { font-size: 20px; }
 #stamina-bar.full { opacity: 0.35; }
 #stamina-bar.exhausted #stamina-fill { background: linear-gradient(90deg,#e3a341,#f5cf6b); }
 body.is-touch #stamina-bar { width: 180px; }
+
+/* ---------- Floating damage numbers ---------- */
+#dmg-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
+.dmg-num { position: absolute; transform: translate(-50%,-50%); font-weight: 800;
+  font-size: 22px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.95); will-change: transform, opacity;
+  letter-spacing: 0.5px; }
+.dmg-num.hs { color: #ffd34d; font-size: 28px; }
+
+/* ---------- Combo indicator ---------- */
+#combo { position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
+  font-weight: 800; font-size: 22px; letter-spacing: 1px; color: #ffd34d;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9); opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 7; }
+#combo.show { opacity: 1; }
+#combo .combo-x { color: #ff7a3c; font-size: 26px; }
+#combo .combo-mult { color: #9aa6b2; font-size: 15px; font-weight: 700; }
+#combo.pop { animation: comboPop 0.25s ease; }
+@keyframes comboPop { 0% { transform: translateX(-50%) scale(1.35); } 100% { transform: translateX(-50%) scale(1); } }
+body.is-touch #combo { top: 64px; font-size: 18px; }

@@ -14,6 +14,7 @@ export class HUD {
     this.ammoMag = $('ammo-mag');
     this.ammoMax = $('ammo-max');
     this.ammoRes = $('ammo-res');
+    this.combo = $('combo');
     this.centerMsg = $('center-msg');
     this.hitmarker = $('hitmarker');
     this.vignette = $('damage-vignette');
@@ -50,6 +51,15 @@ export class HUD {
     }
   }
   setWeapon(name) { if (this.ammoName) this.ammoName.textContent = name; }
+
+  setCombo(count, mult) {
+    if (!this.combo) return;
+    this.combo.innerHTML = `<span class="combo-x">${count}\u00d7</span> COMBO <span class="combo-mult">\u00d7${mult.toFixed(2)} pts</span>`;
+    this.combo.classList.add('show');
+    // restart the pop animation each kill
+    this.combo.classList.remove('pop'); void this.combo.offsetWidth; this.combo.classList.add('pop');
+  }
+  hideCombo() { if (this.combo) this.combo.classList.remove('show'); }
 
   message(text, holdMs = 1400) {
     this.centerMsg.textContent = text;

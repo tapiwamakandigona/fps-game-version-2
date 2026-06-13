@@ -80,7 +80,12 @@ export class Weapon {
     this.audio.shoot();
     this._muzzle();
     const pellets = this.cfg.pellets || 1;
-    for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1);
+    const acc = new Map();  // aggregate per-zombie damage so a shotgun blast = one number/sound
+    for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1, acc);
+    for (const [zomb, e] of acc) {
+      this.audio.hit(e.headshot);
+      if (this.onHit) this.onHit(zomb, e.headshot, e.point, e.dmg);
+    }
     this._emitAmmo();
     if (this.mag === 0) this.reload();
   }
@@ -96,7 +101,7 @@ export class Weapon {
     return true;
   }
 
-  _fireOne(spread) {
+  _fireOne(spread, acc) {
     this.camera.getWorldDirection(this._dir);
     if (spread) {
       const s = (this.cfg.spreadDeg || 0) * Math.PI / 180;
@@ -116,8 +121,11 @@ export class Weapon {
         const headshot = h.object.userData.part === 'head';
         const dmg = headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage;
         zomb.takeDamage(dmg, headshot);
-        this.audio.hit(headshot);
-        if (this.onHit) this.onHit(zomb, headshot, h.point);
+        if (acc) {
+          let e = acc.get(zomb);
+          if (!e) { e = { dmg: 0, headshot: false, point: h.point.clone() }; acc.set(zomb, e); }
+          e.dmg += dmg; e.headshot = e.headshot || headshot; e.point.copy(h.point);
+        }
       }
       break; // first solid surface stops the pellet
     }

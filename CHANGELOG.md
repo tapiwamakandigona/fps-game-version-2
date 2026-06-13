@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.9 — Damage numbers + combo scoring
+- **Floating damage numbers** pop off enemies on every hit (gold + larger for headshots).
+  Shotgun pellets are now aggregated into a single number/hit-sound per blast instead of
+  spamming 8.
+- **Combo / kill-streak scoring:** chaining kills within 3s builds a combo that raises your
+  points multiplier up to **3×**. A "N× COMBO" banner shows the live multiplier; it resets
+  if you go too long without a kill.
+
 ## v2.8 — Game feel: stamina, view bob, landing
 - **Sprint stamina:** sprinting now drains a stamina meter (new bar under your health),
   empties in ~4.5s, and you must recover to ~35% before sprinting again (no stutter-sprint).
