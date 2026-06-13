@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.11 — Performance pass
+- **Self-hosted, pinned Three.js core** (r0.161) served from the repo instead of a CDN —
+  removes a runtime dependency on unpkg for the largest asset and pins the exact version so a
+  CDN change can never break the build.
+- **Instanced crates:** all crate stacks now render as a single `InstancedMesh` (one draw call
+  instead of ~16) while keeping their colliders, shadows and bullet-blocking intact.
+
 ## v2.10 — Wave-5 boss: THE BUTCHER
 - Wave 5 now spawns a **boss** — a massive, red-glowing brute (2600 HP) alongside the
   remaining horde. It hits hard and soaks a lot of fire.

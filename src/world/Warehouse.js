@@ -88,17 +88,34 @@ export class Warehouse {
     this._container(17, 6, Math.PI);
     this._container(-6, -18, Math.PI / 2);
 
-    // Crate stacks scattered as cover.
+    // Crate stacks scattered as cover. Drawn as a SINGLE InstancedMesh so all
+    // crates cost one draw call instead of ~16, with AABB colliders computed
+    // per instance. (Raycasts/shadows still work on instanced meshes.)
+    const s = 1.4;
     const crateSpots = [
       [-4, 4], [6, -2], [10, 10], [-10, 8], [2, 14], [-14, -2], [14, -10], [0, -6],
     ];
+    const cratePos = [];
     for (const [x, z] of crateSpots) {
       const n = 1 + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i++) {
-        const s = 1.4;
-        this._box(s, s, s, x + (Math.random() - 0.5) * 0.4, s / 2 + i * s, z + (Math.random() - 0.5) * 0.4, this.matCrate, { shadow: true });
+        cratePos.push(new THREE.Vector3(
+          x + (Math.random() - 0.5) * 0.4, s / 2 + i * s, z + (Math.random() - 0.5) * 0.4));
       }
     }
+    const crateGeo = new THREE.BoxGeometry(s, s, s);
+    const crates = new THREE.InstancedMesh(crateGeo, this.matCrate, cratePos.length);
+    crates.castShadow = true; crates.receiveShadow = true;
+    const m4 = new THREE.Matrix4();
+    const half = new THREE.Vector3(s / 2, s / 2, s / 2);
+    for (let i = 0; i < cratePos.length; i++) {
+      m4.makeTranslation(cratePos[i].x, cratePos[i].y, cratePos[i].z);
+      crates.setMatrixAt(i, m4);
+      this.colliders.push(new THREE.Box3(
+        cratePos[i].clone().sub(half), cratePos[i].clone().add(half)));
+    }
+    crates.instanceMatrix.needsUpdate = true;
+    this.scene.add(crates);
 
     // Enemy spawn points (far half of the arena + corners).
     for (const p of [[-20, -20], [20, -20], [0, -21], [-21, 0], [21, 0], [-18, -10], [18, -10]]) {

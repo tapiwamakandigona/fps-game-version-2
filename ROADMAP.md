@@ -29,7 +29,6 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.5 Settings panel: brightness, quality, look sensitivity, volume (persisted)
 - [x] v2.4 Mobile/touch controls (virtual stick + fire button)
 - [ ] Performance: instanced meshes for crates, frustum-culled zombie updates
-- [ ] Reduce first-load by self-hosting a pinned Three.js build instead of CDN
 
 ## Research log
 - (entries appended by the studio loop: graphics techniques, references, decisions)
