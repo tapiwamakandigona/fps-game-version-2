@@ -20,13 +20,14 @@ export class Warehouse {
   }
 
   _buildMaterials() {
-    const floorTex = concreteTexture(8, '#2b2f36');
+    const floorTex = concreteTexture(8, '#41464e');
     const floorRough = roughnessNoise(8, 150);
     this.matFloor = new THREE.MeshStandardMaterial({
-      map: floorTex, roughnessMap: floorRough, roughness: 0.75, metalness: 0.15, color: 0x9aa0a8,
+      map: floorTex, roughnessMap: floorRough, roughness: 0.78, metalness: 0.1, color: 0xc2c8d0,
     });
     this.matWall = new THREE.MeshStandardMaterial({
-      map: concreteTexture(6, '#3a3f47'), roughnessMap: roughnessNoise(6, 170), roughness: 0.9, metalness: 0.05,
+      map: concreteTexture(6, '#4c525c'), roughnessMap: roughnessNoise(6, 170), roughness: 0.9, metalness: 0.05,
+      color: 0xc8ccd2,
     });
     this.matMetal = new THREE.MeshStandardMaterial({
       map: metalTexture(2, '#54585f'), roughness: 0.45, metalness: 0.85,
@@ -37,8 +38,10 @@ export class Warehouse {
     });
   }
 
-  // mesh helper that also registers an AABB collider
-  _box(w, h, d, x, y, z, mat, { collide = true, shadow = true } = {}) {
+  // mesh helper that also registers an AABB collider.
+  // shadow defaults OFF — only props that visibly benefit (crates, containers)
+  // cast shadows, which keeps the shadow pass cheap.
+  _box(w, h, d, x, y, z, mat, { collide = true, shadow = false } = {}) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(x, y, z);
     mesh.castShadow = shadow; mesh.receiveShadow = true;
@@ -93,7 +96,7 @@ export class Warehouse {
       const n = 1 + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i++) {
         const s = 1.4;
-        this._box(s, s, s, x + (Math.random() - 0.5) * 0.4, s / 2 + i * s, z + (Math.random() - 0.5) * 0.4, this.matCrate);
+        this._box(s, s, s, x + (Math.random() - 0.5) * 0.4, s / 2 + i * s, z + (Math.random() - 0.5) * 0.4, this.matCrate, { shadow: true });
       }
     }
 
@@ -118,15 +121,15 @@ export class Warehouse {
   }
 
   _buildLights() {
-    this.scene.add(new THREE.AmbientLight(0x3a4252, 0.55));
-    const hemi = new THREE.HemisphereLight(0x6b7488, 0x14161c, 0.5);
+    this.scene.add(new THREE.AmbientLight(0x4a5468, 0.95));
+    const hemi = new THREE.HemisphereLight(0x9aa6bf, 0x2a2e36, 0.85);
     this.scene.add(hemi);
 
     // Key directional light (cold skylight through the roof) — casts shadows.
-    const sun = new THREE.DirectionalLight(0xbcd2ff, 1.1);
+    const sun = new THREE.DirectionalLight(0xcfe0ff, 1.5);
     sun.position.set(10, 20, 6);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(1024, 1024); // 1024 instead of 2048 — big perf win
     const d = ARENA_HALF + 4;
     sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
     sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
@@ -137,12 +140,12 @@ export class Warehouse {
 
     // Warm hanging lamp fixtures — emissive disc + point light (these bloom).
     const lampPositions = [[-10, -10], [10, -10], [0, 2], [-10, 10], [10, 10]];
-    const lampMat = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb866, emissiveIntensity: 4 });
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffb866, emissiveIntensity: 3.5 });
     for (const [x, z] of lampPositions) {
       const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.25, 16), lampMat);
       disc.position.set(x, 8.3, z);
       this.scene.add(disc);
-      const pl = new THREE.PointLight(0xffb866, 14, 22, 2);
+      const pl = new THREE.PointLight(0xffc080, 22, 30, 2);
       pl.position.set(x, 7.9, z);
       pl.castShadow = false;
       this.scene.add(pl);
@@ -150,7 +153,7 @@ export class Warehouse {
     }
 
     // A bright cold accent at the spawn end to draw the eye down the warehouse.
-    const accent = new THREE.PointLight(0x88bbff, 8, 26, 2);
+    const accent = new THREE.PointLight(0x9cc3ff, 12, 32, 2);
     accent.position.set(0, 6, -ARENA_HALF + 4);
     this.scene.add(accent);
   }
@@ -159,7 +162,7 @@ export class Warehouse {
   update(t) {
     for (let i = 0; i < this.lamps.length; i++) {
       const l = this.lamps[i];
-      l.intensity = 13 + Math.sin(t * 6 + i * 1.7) * 0.6 + (Math.random() < 0.02 ? -5 : 0);
+      l.intensity = 21 + Math.sin(t * 6 + i * 1.7) * 0.8 + (Math.random() < 0.02 ? -6 : 0);
     }
   }
 }

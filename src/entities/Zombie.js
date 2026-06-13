@@ -41,7 +41,10 @@ export class Zombie {
     this.legL = new THREE.Mesh(G.limb, cloth); this.legL.position.set(-0.16, 0.4, 0);
     this.legR = new THREE.Mesh(G.limb, cloth); this.legR.position.set(0.16, 0.4, 0);
     this.armL.rotation.x = this.armR.rotation.x = -1.3; // arms outstretched
-    for (const m of [torso, head, this.armL, this.armR, this.legL, this.legR]) { m.castShadow = true; g.add(m); }
+    // Only the torso casts a shadow (perf): limbs/head casting adds a lot of
+    // shadow-pass geometry across many zombies for little visual gain.
+    for (const m of [head, this.armL, this.armR, this.legL, this.legR]) { m.castShadow = false; g.add(m); }
+    torso.castShadow = true; g.add(torso);
 
     // tag the whole group + parts so raycasts can resolve to this instance
     g.userData.zombie = this;

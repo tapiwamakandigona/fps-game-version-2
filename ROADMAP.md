@@ -1,0 +1,35 @@
+# FPS Arena v2 — Studio Roadmap
+
+This repo is developed "studio-style": a recurring autonomous dev loop picks the
+top unchecked item below, implements + tests it on the live build, then checks it
+off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
+
+## Done (v2.0 — initial release)
+- [x] Buildless Three.js architecture (ES modules + CDN import map, no bundler)
+- [x] Cinematic engine: ACES tone mapping, sRGB, UnrealBloom, FogExp2, soft shadows
+- [x] Concept A warehouse level (PBR concrete/metal, crates, containers, lamp lighting)
+- [x] Player: pointer-lock look, WASD+sprint+jump, circle-vs-AABB collision, HP + regen
+- [x] Hitscan pistol: muzzle flash, recoil, reload, headshots, no shoot-through-cover
+- [x] Zombie AI: seek + attack, hit-flash, topple death, headshot tagging
+- [x] 5-wave survival loop with scaling difficulty + **real Victory / Game Over**
+- [x] HUD, menus, procedural WebAudio SFX, localStorage high score
+
+## Backlog (priority order — top item is next)
+- [x] v2.1 Brightness + visibility pass (exposure/fog/lighting so the level reads clearly)
+- [x] v2.1 Performance pass (shadow map size, bloom res, pixel-ratio clamp, fewer shadow casters)
+- [ ] In-game brightness/quality slider so players can tune to their display
+- [ ] Muzzle-relative bullet origin + tracer line for clearer shot feedback
+- [ ] Second weapon (SMG or shotgun) + 1/2 number-key weapon switching
+- [ ] Ammo/health pickups dropped by zombies; pickup pacing tuning
+- [ ] Minimap / enemy direction indicators on the HUD
+- [ ] Sprint stamina + view bob + landing impact for game feel
+- [ ] Damage numbers floating off enemies; kill streak / combo scoring
+- [ ] A "runner" zombie variant (fast, low HP) and a "brute" (slow, high HP)
+- [ ] Boss on wave 5 (port/upgrade the v1 BossEnemy idea) with a health bar
+- [ ] Settings panel: mouse sensitivity, master volume, bloom/quality toggle
+- [ ] Mobile/touch controls (virtual stick + fire button), like fps-game v1
+- [ ] Performance: instanced meshes for crates, frustum-culled zombie updates
+- [ ] Reduce first-load by self-hosting a pinned Three.js build instead of CDN
+
+## Research log
+- (entries appended by the studio loop: graphics techniques, references, decisions)
