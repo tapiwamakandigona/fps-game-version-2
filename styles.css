@@ -77,6 +77,13 @@ button:active { transform: translateY(0); }
   justify-content: center; color: #9aa6b2; font-size: 14px; }
 .controls-help b { color: #cfe0ff; }
 
+/* ---------- Minimap ---------- */
+#minimap { transition: opacity 0.2s; }
+@media (max-width: 560px) {
+  #minimap { width: 110px !important; height: 110px !important; top: 10px !important; right: 10px !important; }
+}
+body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 110px !important; height: 110px !important; }
+
 /* ---------- Touch / mobile controls ---------- */
 #touch-ui { position: absolute; inset: 0; z-index: 15; display: none; pointer-events: none;
   touch-action: none; user-select: none; -webkit-user-select: none; }

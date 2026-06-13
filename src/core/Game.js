@@ -12,6 +12,7 @@ import { Settings } from '../systems/Settings.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
+import { Minimap } from '../ui/Minimap.js';
 
 const HS_KEY = 'fps-v2-highscore';
 
@@ -19,6 +20,7 @@ export class Game {
   constructor() {
     this.engine = new Engine(document.getElementById('game-canvas'));
     this.hud = new HUD();
+    this.minimap = new Minimap(document.getElementById('hud'));
     this.input = new Input();
     this.audio = new Audio();
     this.touch = isTouchDevice();
@@ -143,6 +145,7 @@ export class Game {
     this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
     this.hud.showHud(true);
+    this.minimap.setVisible(true);
     this.input.setEnabled(true);
     if (this.touch) this.touchControls.setEnabled(true);
     this.state = 'playing';
@@ -171,6 +174,7 @@ export class Game {
     if (newBest) { this.best = this.score; localStorage.setItem(HS_KEY, String(this.best)); }
     if (victory) this.audio.victory(); else this.audio.gameover();
     this.hud.showHud(false);
+    this.minimap.setVisible(false);
     this.hud.showEnd({ victory, score: this.score, best: this.best, newBest });
   }
 
@@ -200,6 +204,7 @@ export class Game {
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
+      this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);
       if (!this.player.alive) this._end(false);
     }
 
