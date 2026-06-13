@@ -8,6 +8,7 @@ export class HUD {
     this.waveVal = $('wave-val');
     this.healthFill = $('health-fill');
     this.healthText = $('health-text');
+    this.ammoName = $('ammo-name');
     this.ammoMag = $('ammo-mag');
     this.ammoMax = $('ammo-max');
     this.centerMsg = $('center-msg');
@@ -32,6 +33,7 @@ export class HUD {
   }
 
   setAmmo(mag, max) { this.ammoMag.textContent = mag; this.ammoMax.textContent = max; }
+  setWeapon(name) { if (this.ammoName) this.ammoName.textContent = name; }
 
   message(text, holdMs = 1400) {
     this.centerMsg.textContent = text;

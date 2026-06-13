@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2 — Weapons & feedback
+- New weapon system: switch between **Pistol** (auto, precise) and **Shotgun**
+  (8-pellet spread, pump-action) with **1 / 2** keys or the **mouse wheel**.
+- **Tracer rounds** + muzzle-origin bullet lines for clear shot feedback; per-pellet
+  hitscan still respects cover (no shooting through walls).
+- HUD shows the active weapon name + its magazine.
+
 ## v2.1 — Visibility & performance pass
 - Brighter scene: tone-mapping exposure 1.0→1.35, lighter base materials, stronger
   ambient/hemisphere/sun + warmer lamp lights, thinner fog. The warehouse now reads

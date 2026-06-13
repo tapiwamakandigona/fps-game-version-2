@@ -6,6 +6,8 @@ export class Input {
     this.onShoot = null;   // callback on left-press
     this.onReload = null;
     this.onPause = null;
+    this.onSwitch = null;     // callback(index) on number keys
+    this.onSwitchNext = null; // callback() on mouse wheel
 
     this._enabled = false;
 
@@ -15,6 +17,8 @@ export class Input {
       this.keys.add(code);
       if (code === 'KeyR' && this.onReload) this.onReload();
       if (code === 'Escape' && this.onPause) this.onPause();
+      if (code === 'Digit1' && this.onSwitch) this.onSwitch(0);
+      if (code === 'Digit2' && this.onSwitch) this.onSwitch(1);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
 
@@ -24,6 +28,7 @@ export class Input {
       if (this.onShoot) this.onShoot();
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
+    window.addEventListener('wheel', () => { if (this._enabled && this.onSwitchNext) this.onSwitchNext(); }, { passive: true });
     window.addEventListener('blur', () => { this.keys.clear(); this.mouseDown = false; });
   }
 

@@ -17,9 +17,9 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 ## Backlog (priority order — top item is next)
 - [x] v2.1 Brightness + visibility pass (exposure/fog/lighting so the level reads clearly)
 - [x] v2.1 Performance pass (shadow map size, bloom res, pixel-ratio clamp, fewer shadow casters)
+- [x] v2.2 Tracer rounds + muzzle-origin bullet feedback
+- [x] v2.2 Second weapon (shotgun, 8-pellet spread) + 1/2 + mouse-wheel switching
 - [ ] In-game brightness/quality slider so players can tune to their display
-- [ ] Muzzle-relative bullet origin + tracer line for clearer shot feedback
-- [ ] Second weapon (SMG or shotgun) + 1/2 number-key weapon switching
 - [ ] Ammo/health pickups dropped by zombies; pickup pacing tuning
 - [ ] Minimap / enemy direction indicators on the HUD
 - [ ] Sprint stamina + view bob + landing impact for game feel

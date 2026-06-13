@@ -3,7 +3,7 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Player } from '../entities/Player.js';
-import { Pistol } from '../weapons/Pistol.js';
+import { WeaponManager } from '../weapons/WeaponManager.js';
 import { EnemyManager, TOTAL_WAVES } from '../entities/EnemyManager.js';
 import { Input } from '../systems/Input.js';
 import { Audio } from '../systems/Audio.js';
@@ -42,11 +42,11 @@ export class Game {
   _buildWorld() {
     this.world = new Warehouse(this.engine.scene);
     this.player = new Player(this.engine.camera, this.world.colliders);
-    this.pistol = new Pistol(this.engine.camera, this.engine.scene, this.audio);
+    this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); };
-    this.pistol.onHit = (z, headshot) => {
+    this.weapons.onHit = (z, headshot) => {
       this.hud.hitmark(headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
@@ -55,7 +55,10 @@ export class Game {
     this.enemies.onKill = (z, sc) => { this.score += sc; this.hud.setScore(this.score); };
     this.enemies.onVictory = () => this._end(true);
 
-    this.input.onReload = () => { if (this.state === 'playing') this.pistol.reload(); };
+    this.input.onReload = () => { if (this.state === 'playing') this.weapons.reload(); };
+    this.input.onShoot = () => { if (this.state === 'playing') this.weapons.fire(); };
+    this.input.onSwitch = (i) => { if (this.state === 'playing') this.weapons.switchTo(i); };
+    this.input.onSwitchNext = () => { if (this.state === 'playing') this.weapons.next(); };
   }
 
   _wireControls() {
@@ -81,8 +84,7 @@ export class Game {
     this.score = 0; this.hud.setScore(0);
     this.enemies.reset();
     this.player.spawn(this.world.playerSpawn);
-    this.pistol.mag = this.pistol.magSize;
-    this.hud.setAmmo(this.pistol.mag, this.pistol.magSize);
+    this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
     this.hud.showHud(true);
     this.input.setEnabled(true);
@@ -111,10 +113,9 @@ export class Game {
 
     if (this.state === 'playing') {
       this.player.update(dt, this.input);
-      this.pistol.update(dt, this.input.mouseDown);
+      this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
-      this.hud.setAmmo(this.pistol.mag, this.pistol.magSize);
       if (!this.player.alive) this._end(false);
     }
 
