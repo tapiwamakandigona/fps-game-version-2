@@ -15,6 +15,9 @@ export class HUD {
     this.ammoMax = $('ammo-max');
     this.ammoRes = $('ammo-res');
     this.combo = $('combo');
+    this.bossBar = $('boss-bar');
+    this.bossName = $('boss-name');
+    this.bossFill = $('boss-fill');
     this.centerMsg = $('center-msg');
     this.hitmarker = $('hitmarker');
     this.vignette = $('damage-vignette');
@@ -51,6 +54,17 @@ export class HUD {
     }
   }
   setWeapon(name) { if (this.ammoName) this.ammoName.textContent = name; }
+
+  showBoss(name) {
+    if (!this.bossBar) return;
+    if (this.bossName) this.bossName.textContent = name;
+    if (this.bossFill) this.bossFill.style.width = '100%';
+    this.bossBar.classList.add('show');
+  }
+  setBoss(frac) {
+    if (this.bossFill) this.bossFill.style.width = Math.max(0, Math.min(100, frac * 100)) + '%';
+  }
+  hideBoss() { if (this.bossBar) this.bossBar.classList.remove('show'); }
 
   setCombo(count, mult) {
     if (!this.combo) return;

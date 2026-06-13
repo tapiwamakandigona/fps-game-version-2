@@ -87,6 +87,15 @@ export class Game {
       this.pickups.maybeDrop(z.group.position, z.variant);
     };
     this.enemies.onVictory = () => this._end(true);
+    this.enemies.onBossSpawn = (b) => {
+      this.hud.showBoss(b.name || 'BOSS');
+      this.hud.message('\u26a0  ' + (b.name || 'BOSS') + ' INCOMING', 2000);
+      this.audio.wave();
+    };
+    this.enemies.onBossDeath = () => {
+      this.hud.hideBoss();
+      this.hud.message('BOSS DOWN!', 1600);
+    };
 
     this.input.onReload = () => { if (this.state === 'playing') this.weapons.reload(); };
     this.input.onShoot = () => { if (this.state === 'playing') this.weapons.fire(); };
@@ -154,6 +163,7 @@ export class Game {
     this.pickups.reset();
     this.damageNumbers.reset();
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
+    this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
     this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
@@ -221,6 +231,7 @@ export class Game {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
       }
+      if (this.enemies.boss && this.enemies.boss.alive) this.hud.setBoss(this.enemies.boss.health / this.enemies.boss.maxHealth);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
       this.hud.setStamina(this.player.stamina, this.player._exhausted);
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);

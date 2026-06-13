@@ -185,3 +185,16 @@ body.is-touch #stamina-bar { width: 180px; }
 #combo.pop { animation: comboPop 0.25s ease; }
 @keyframes comboPop { 0% { transform: translateX(-50%) scale(1.35); } 100% { transform: translateX(-50%) scale(1); } }
 body.is-touch #combo { top: 64px; font-size: 18px; }
+
+/* ---------- Boss health bar ---------- */
+#boss-bar { position: absolute; top: 54px; left: 50%; transform: translateX(-50%);
+  width: min(560px, 80vw); text-align: center; opacity: 0; pointer-events: none;
+  transition: opacity 0.3s; z-index: 7; }
+#boss-bar.show { opacity: 1; }
+#boss-name { font-weight: 800; letter-spacing: 3px; font-size: 17px; color: #ff5a48;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.95); margin-bottom: 4px; }
+#boss-track { height: 14px; border: 2px solid rgba(255,90,72,0.55); border-radius: 4px;
+  background: rgba(0,0,0,0.55); overflow: hidden; box-shadow: 0 0 14px rgba(255,40,30,0.35); }
+#boss-fill { height: 100%; width: 100%; background: linear-gradient(90deg,#b81022,#ff4533,#ff7a3c);
+  transition: width 0.12s linear; }
+body.is-touch #boss-name { font-size: 14px; }

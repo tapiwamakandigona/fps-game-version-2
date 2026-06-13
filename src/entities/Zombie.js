@@ -34,6 +34,7 @@ export class Zombie {
     // Per-variant tint so the three enemy types read at a glance.
     const tint = this.variant === 'runner' ? { skin: 0x97b14a, cloth: 0x3a2c1c }
       : this.variant === 'brute' ? { skin: 0x7a3a34, cloth: 0x241c1c }
+      : this.variant === 'boss' ? { skin: 0x8a1422, cloth: 0x180810 }
       : { skin: 0x5a7a4a, cloth: 0x2c3340 };
     const skin = new THREE.MeshStandardMaterial({ color: tint.skin, roughness: 0.85, metalness: 0.0 });
     const cloth = new THREE.MeshStandardMaterial({ color: tint.cloth, roughness: 0.95, metalness: 0.0 });
@@ -57,6 +58,14 @@ export class Zombie {
     g.userData.zombie = this;
     g.traverse((o) => { o.userData.zombie = this; });
     head.userData.part = 'head';
+
+    if (this.variant === 'boss') {
+      // menacing red glow so the boss reads instantly
+      const light = new THREE.PointLight(0xff2a1a, 2.0, 12, 2);
+      light.position.set(0, 1.5, 0);
+      g.add(light);
+      for (const m of this._mats) m.emissive.setRGB(0.22, 0.02, 0.02);
+    }
 
     if (this.scaleF !== 1) g.scale.setScalar(this.scaleF);
     this.group = g;
@@ -118,6 +127,10 @@ export class Zombie {
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt * 4);
       for (const m of this._mats) { m.emissive.setRGB(this.flash, 0, 0); }
+    } else if (this.variant === 'boss') {
+      // keep a pulsing red glow when not freshly hit
+      const pulse = 0.18 + 0.1 * Math.sin(t * 3);
+      for (const m of this._mats) m.emissive.setRGB(pulse, 0.02, 0.02);
     }
   }
 

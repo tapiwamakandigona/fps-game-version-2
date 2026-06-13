@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.10 — Wave-5 boss: THE BUTCHER
+- Wave 5 now spawns a **boss** — a massive, red-glowing brute (2600 HP) alongside the
+  remaining horde. It hits hard and soaks a lot of fire.
+- A dedicated **boss health bar** appears at the top of the screen while it's alive, with a
+  "⚠ THE BUTCHER INCOMING" warning on spawn and "BOSS DOWN!" on the kill.
+- Killing it is worth 1500 base points (× your current combo multiplier).
+
 ## v2.9 — Damage numbers + combo scoring
 - **Floating damage numbers** pop off enemies on every hit (gold + larger for headshots).
   Shotgun pellets are now aggregated into a single number/hit-sound per blast instead of

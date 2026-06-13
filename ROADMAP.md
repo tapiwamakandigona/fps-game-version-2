@@ -25,7 +25,7 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.8 Sprint stamina + view bob + landing impact
 - [x] v2.9 Floating damage numbers + combo/kill-streak scoring
 - [x] v2.3 "Runner" (fast, low HP) + "Brute" (slow, tanky, high-damage) zombie variants
-- [ ] Boss on wave 5 (port/upgrade the v1 BossEnemy idea) with a health bar
+- [x] v2.10 Wave-5 boss (THE BUTCHER) with on-screen health bar
 - [x] v2.5 Settings panel: brightness, quality, look sensitivity, volume (persisted)
 - [x] v2.4 Mobile/touch controls (virtual stick + fire button)
 - [ ] Performance: instanced meshes for crates, frustum-culled zombie updates
