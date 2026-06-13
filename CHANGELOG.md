@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.12 — Juice pass
+- **Screen shake** — a trauma-based camera shake punches on every shot (bigger on the
+  shotgun), when you take damage, when the boss arrives, and on kills. It's applied to the
+  render frame only, so it never touches your aim or collisions.
+- **Impact sparks** — every bullet now pops a little additive flash where it lands: warm
+  sparks on walls/crates, red on a body hit, bright gold on a headshot.
+- **Hit-stop** — a tiny time-freeze on kills (a touch longer on brutes, and a meaty one on
+  the boss death) that makes each kill feel like it connects.
+
 ## v2.11 — Performance pass
 - **Self-hosted, pinned Three.js core** (r0.161) served from the repo instead of a CDN —
   removes a runtime dependency on unpkg for the largest asset and pins the exact version so a

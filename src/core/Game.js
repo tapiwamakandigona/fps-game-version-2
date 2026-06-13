@@ -14,6 +14,8 @@ import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
 import { Minimap } from '../ui/Minimap.js';
 import { DamageNumbers } from '../ui/DamageNumbers.js';
+import { Impacts } from '../ui/Impacts.js';
+import { ScreenShake } from '../systems/ScreenShake.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -67,9 +69,18 @@ export class Game {
     this.pickups = new PickupManager(this.engine.scene);
     this.pickups.onCollect = (type, amount) => this._onPickup(type, amount);
     this.damageNumbers = new DamageNumbers(this.engine.camera, document.getElementById('hud'));
+    this.impacts = new Impacts(this.engine.scene, this.engine.camera);
+    this.shake = new ScreenShake();
+    this._hitStop = 0;
     this.combo = 0; this.comboTimer = 0;
 
-    this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); };
+    this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
+    // Juice: shake on fire, sparks at impact points.
+    this.weapons.onShoot = (type) => this.shake.add(type === 'shotgun' ? 0.32 : 0.16);
+    this.weapons.onImpact = (point, isZomb, headshot) => {
+      const color = isZomb ? (headshot ? 0xffe24d : 0xff5a5a) : 0xffd27f;
+      this.impacts.spawn(point, color, headshot ? 1.5 : (isZomb ? 1.1 : 0.9));
+    };
     this.weapons.onHit = (z, headshot, point, dmg) => {
       this.hud.hitmark(headshot);
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
@@ -85,16 +96,22 @@ export class Game {
       this.score += award; this.hud.setScore(this.score);
       if (this.combo >= 2) this.hud.setCombo(this.combo, mult);
       this.pickups.maybeDrop(z.group.position, z.variant);
+      // hit-stop punch on kills (a touch longer on brutes)
+      this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
+      this.shake.add(0.12);
     };
     this.enemies.onVictory = () => this._end(true);
     this.enemies.onBossSpawn = (b) => {
       this.hud.showBoss(b.name || 'BOSS');
       this.hud.message('\u26a0  ' + (b.name || 'BOSS') + ' INCOMING', 2000);
       this.audio.wave();
+      this.shake.add(0.6);
     };
     this.enemies.onBossDeath = () => {
       this.hud.hideBoss();
       this.hud.message('BOSS DOWN!', 1600);
+      this._hitStop = Math.max(this._hitStop, 0.14);
+      this.shake.add(0.7);
     };
 
     this.input.onReload = () => { if (this.state === 'playing') this.weapons.reload(); };
@@ -162,6 +179,7 @@ export class Game {
     this.enemies.reset();
     this.pickups.reset();
     this.damageNumbers.reset();
+    this.impacts.reset(); this.shake.reset(); this._hitStop = 0;
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
@@ -215,7 +233,10 @@ export class Game {
 
   _loop() {
     requestAnimationFrame(this._loop);
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+    const rawDt = Math.min(this.clock.getDelta(), 0.05);
+    let dt = rawDt;
+    // hit-stop: briefly slow the world for a punchy impact (real time still elapses)
+    if (this._hitStop > 0) { this._hitStop = Math.max(0, this._hitStop - rawDt); dt = rawDt * 0.08; }
     const t = this.clock.elapsedTime;
 
     this.world.update(t);
@@ -227,6 +248,7 @@ export class Game {
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
       this.damageNumbers.update(dt);
+      this.impacts.update(dt);
       if (this.combo > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
@@ -238,6 +260,12 @@ export class Game {
       if (!this.player.alive) this._end(false);
     }
 
+    // Screen shake: layer a transient offset onto the camera for THIS rendered
+    // frame only, then revert it so physics/aim are never affected.
+    const sh = this.shake.sample(rawDt);
+    const cam = this.engine.camera;
+    cam.position.x += sh.x; cam.position.y += sh.y; cam.position.z += sh.z;
     this.engine.render();
+    cam.position.x -= sh.x; cam.position.y -= sh.y; cam.position.z -= sh.z;
   }
 }

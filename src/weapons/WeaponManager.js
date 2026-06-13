@@ -20,7 +20,13 @@ export class WeaponManager {
       w.setVisible(false);
     }
     this.onHit = null;
-    for (const w of this.weapons) w.onHit = (z, hs, p) => { if (this.onHit) this.onHit(z, hs, p); };
+    this.onImpact = null;  // (point, isZombie, headshot)
+    this.onShoot = null;   // (type)
+    for (const w of this.weapons) {
+      w.onHit = (z, hs, p, dmg) => { if (this.onHit) this.onHit(z, hs, p, dmg); };
+      w.onImpact = (p, isZ, hs) => { if (this.onImpact) this.onImpact(p, isZ, hs); };
+      w.onShoot = (type) => { if (this.onShoot) this.onShoot(type); };
+    }
     this.switchTo(0);
   }
 

@@ -79,6 +79,7 @@ export class Weapon {
     this.recoil = 1;
     this.audio.shoot();
     this._muzzle();
+    if (this.onShoot) this.onShoot(this.cfg.type);
     const pellets = this.cfg.pellets || 1;
     const acc = new Map();  // aggregate per-zombie damage so a shotgun blast = one number/sound
     for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1, acc);
@@ -117,8 +118,10 @@ export class Weapon {
       if (this._ignored(h.object)) continue;
       endPoint = h.point.clone();
       const zomb = this._findZombie(h.object);
-      if (zomb && zomb.alive) {
-        const headshot = h.object.userData.part === 'head';
+      let headshot = false;
+      const hitZomb = zomb && zomb.alive;
+      if (hitZomb) {
+        headshot = h.object.userData.part === 'head';
         const dmg = headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage;
         zomb.takeDamage(dmg, headshot);
         if (acc) {
@@ -127,6 +130,7 @@ export class Weapon {
           e.dmg += dmg; e.headshot = e.headshot || headshot; e.point.copy(h.point);
         }
       }
+      if (this.onImpact) this.onImpact(h.point.clone(), !!hitZomb, headshot);
       break; // first solid surface stops the pellet
     }
     this._spawnTracer(endPoint);
