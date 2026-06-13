@@ -117,3 +117,12 @@ body.is-touch .reload-key { display: none; }
   .panel { padding: 28px 30px; }
   .panel h1 { font-size: 40px; }
 }
+
+/* On touch, lift the ammo readout above the FIRE button so it stays visible */
+body.is-touch #ammo { right: auto; left: 50%; transform: translateX(-50%);
+  bottom: 70px; text-align: center; }
+body.is-touch #score { font-size: 20px; }
+@media (max-width: 560px) {
+  body.is-touch #ammo-counts { font-size: 26px; }
+  body.is-touch #ammo { bottom: 64px; }
+}
