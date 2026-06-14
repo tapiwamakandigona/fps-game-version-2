@@ -99,6 +99,31 @@ export class EnemyManager {
     this.zombies.push(z);
   }
 
+  // Boid-style separation so the horde fans out and surrounds the player instead
+  // of stacking into a single overlapping blob. O(n^2) but n is small (<= cap).
+  _separate() {
+    const zs = this.zombies;
+    for (let i = 0; i < zs.length; i++) {
+      const a = zs[i];
+      if (!a.alive) continue;
+      const ap = a.group.position;
+      for (let j = i + 1; j < zs.length; j++) {
+        const b = zs[j];
+        if (!b.alive) continue;
+        const bp = b.group.position;
+        const dx = ap.x - bp.x, dz = ap.z - bp.z;
+        const minD = a.radius + b.radius;
+        const d2 = dx * dx + dz * dz;
+        if (d2 > minD * minD || d2 < 1e-6) continue;
+        const d = Math.sqrt(d2);
+        const push = (minD - d) * 0.5;
+        const nx = dx / d, nz = dz / d;
+        ap.x += nx * push; ap.z += nz * push;
+        bp.x -= nx * push; bp.z -= nz * push;
+      }
+    }
+  }
+
   _spawnSpit(fromPos) {
     const start = fromPos.clone(); start.y = 1.3;
     const mat = new THREE.MeshStandardMaterial({ color: 0x9fe04a, emissive: 0x4a8a1e, emissiveIntensity: 1.2, roughness: 0.5 });
@@ -191,6 +216,7 @@ export class EnemyManager {
 
     // update + cull
     for (const z of this.zombies) z.update(dt, t);
+    this._separate();
     for (let i = this.zombies.length - 1; i >= 0; i--) {
       if (this.zombies[i].dead) { this.zombies[i].dispose(); this.zombies.splice(i, 1); }
     }

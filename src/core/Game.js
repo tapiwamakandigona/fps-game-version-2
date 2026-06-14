@@ -25,6 +25,11 @@ import { DamageNumbers } from '../ui/DamageNumbers.js';
 import { Impacts } from '../ui/Impacts.js';
 import { ScreenShake } from '../systems/ScreenShake.js';
 import { UpgradeShop } from '../ui/UpgradeShop.js';
+import { PerfMeter, AdaptiveQuality } from '../systems/Perf.js';
+import { Announcer } from '../systems/Announcer.js';
+import { KillFeed } from '../ui/KillFeed.js';
+import { DirectionalDamage } from '../ui/DirectionalDamage.js';
+import { Killstreaks } from '../systems/Killstreaks.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -33,6 +38,9 @@ const HS_KEY = 'fps-v2-highscore';
 export class Game {
   constructor() {
     this.engine = new Engine(document.getElementById('game-canvas'));
+    // Perf instrumentation + adaptive resolution (holds ~60fps on weaker devices).
+    this.perf = new PerfMeter(this.engine.renderer);
+    this.adaptive = new AdaptiveQuality(this.engine);
     this.hud = new HUD();
     this.minimap = new Minimap(document.getElementById('hud'));
     this.input = new Input();
@@ -50,6 +58,12 @@ export class Game {
     this.best = Number(localStorage.getItem(HS_KEY) || 0);
     this.clock = new THREE.Clock();
 
+    // COD feedback systems (created before _buildWorld so Killstreaks can use them).
+    const hudEl = document.getElementById('hud');
+    this.announcer = new Announcer();
+    this.killFeed = new KillFeed(hudEl);
+    this.dirDmg = new DirectionalDamage(hudEl, this.engine.camera);
+
     this._buildWorld();
     this._wireControls();
 
@@ -58,6 +72,8 @@ export class Game {
     this.settings = new Settings(this);
     this.settingsPanel = new SettingsPanel(this.settings, container, () => this._closeSettings());
     this.settings.apply();
+    // Adaptive quality uses the chosen preset as its ceiling (only scales down from there).
+    this.adaptive.setCeiling(this.settings.get('quality'));
 
     this._wireButtons();
 
@@ -65,6 +81,11 @@ export class Game {
     if (this.touch) this._applyTouchMenu();
     this.hud.showMenu(this.best);
     this.engine.camera.position.copy(this.world.playerSpawn);
+
+    // Perf overlay toggle: backtick (`) or F3, available any time.
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.perf.toggle(); }
+    });
 
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
@@ -91,6 +112,20 @@ export class Game {
       this.audio.explosion();
     };
     this.combo = 0; this.comboTimer = 0;
+    this._mkCount = 0; this._mkTimer = 0;   // rapid multi-kill window (announcer)
+    this._lastHeadshot = false;             // most recent hit was a headshot
+    this._lowAnnounced = false;             // low-health voice line fired once
+
+    // Killstreak system (UAV / Sentry / Mortar / Self-Revive).
+    this.killstreaks = new Killstreaks({
+      scene: this.engine.scene,
+      camera: this.engine.camera,
+      getZombies: () => this.enemies.zombies,
+      audio: this.audio,
+      announcer: this.announcer,
+      hud: this.hud,
+      onMortarExplosion: (pos) => this._explodeAt(pos, 6, 170),
+    });
 
     this.shop = new UpgradeShop();
     this.shop.getScore = () => this.score;
@@ -98,20 +133,45 @@ export class Game {
     this.shop.onApply = (id) => this._applyUpgrade(id);
     this.shop.onDeploy = () => this._closeShop();
 
-    this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
+    // Curated bullet raycast targets: world solids + live enemy groups only.
+    // Rebuilt per trigger pull — a few dozen entries vs. the whole scene graph.
+    this.weapons.getTargets = () => {
+      const t = this.world.solids ? this.world.solids.slice() : [];
+      const zs = this.enemies.zombies;
+      for (let i = 0; i < zs.length; i++) if (zs[i].alive) t.push(zs[i].group);
+      return t;
+    };
+
+    this.player.onHurt = () => {
+      this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
+      // Directional damage indicator: point toward the nearest live threat.
+      const atk = this._nearestZombiePos();
+      if (atk) this.dirDmg.hit(atk, this.engine.camera.position);
+      // Taking damage breaks the killstreak.
+      if (this.killstreaks) this.killstreaks.reset();
+    };
+    this.player.onSlide = () => { this.shake.add(0.18); };
     // Juice: shake on fire, sparks at impact points.
     this.weapons.onShoot = (type) => this.shake.add(
       { shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
+    this.weapons.onRecoil = (cfg, ads) => this._applyRecoil(cfg, ads);
+    // ADS / recoil state.
+    this._baseFov = this.engine.camera.fov;
+    this._adsT = 0;
+    this._lookZoom = 1;
+    this._recoil = { x: 0, y: 0 };
+    this._recoilTarget = { x: 0, y: 0 };
     this.weapons.onImpact = (point, isZomb, headshot) => {
       const color = isZomb ? (headshot ? 0xffe24d : 0xff5a5a) : 0xffd27f;
       this.impacts.spawn(point, color, headshot ? 1.5 : (isZomb ? 1.1 : 0.9));
     };
     this.weapons.onHit = (z, headshot, point, dmg) => {
+      this._lastHeadshot = headshot;
       this.hud.hitmark(headshot);
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
-    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); this.grenadeMgr.refill(); };
+    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); this.grenadeMgr.refill(); this.announcer.wave(w); };
     this.enemies.onIntermission = (next, secs) => this.hud.message(`WAVE CLEARED — next in ${secs}`, 1100);
     this.enemies.onKill = (z, sc) => {
       // combo: each kill within the window raises the points multiplier (caps at 3x)
@@ -124,6 +184,22 @@ export class Game {
       // hit-stop punch on kills (a touch longer on brutes)
       this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
       this.shake.add(0.12);
+
+      // Kill feed + killstreak + rapid multi-kill announcer.
+      const explosive = z.variant === 'exploder';
+      this.killFeed.kill({
+        weapon: this.weapons.current.name,
+        variant: z.variant || 'normal',
+        points: award,
+        headshot: this._lastHeadshot,
+        explosive,
+        streak: false,
+      });
+      this._lastHeadshot = false;
+      this.killstreaks.addKill();
+      this._mkCount = this._mkTimer > 0 ? this._mkCount + 1 : 1;
+      this._mkTimer = 1.2;
+      if (this._mkCount >= 2) this.announcer.multiKill(this._mkCount);
     };
     this.enemies.onVictory = () => this._end(true);
     this.enemies.onWaveCleared = (next) => this._openShop(next);
@@ -143,6 +219,7 @@ export class Game {
       this.hud.message('\u26a0  ' + (b.name || 'BOSS') + ' INCOMING', 2000);
       this.audio.wave();
       this.shake.add(0.6);
+      this.announcer.bossIncoming();
     };
     this.enemies.onBossDeath = () => {
       this.hud.hideBoss();
@@ -297,6 +374,10 @@ export class Game {
     this.shop.reset();
     this.player.maxHealth = 100;
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
+    this._mkCount = 0; this._mkTimer = 0; this._lowAnnounced = false;
+    this.killstreaks.dispose(); this.killstreaks.reset();
+    this.killFeed.clear(); this.dirDmg.clear();
+    this.announcer.cancelAll();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
     this.weapons.reset();
@@ -330,6 +411,10 @@ export class Game {
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; localStorage.setItem(HS_KEY, String(this.best)); }
     if (victory) this.audio.victory(); else this.audio.gameover();
+    if (victory) this.announcer.victory(); else this.announcer.defeat();
+    this.killFeed.clear();
+    this.dirDmg.clear();
+    this.killstreaks.dispose();
     this.hud.showHud(false);
     this.minimap.setVisible(false);
     this.hud.showEnd({ victory, score: this.score, best: this.best, newBest });
@@ -338,17 +423,102 @@ export class Game {
   _applyTouchLook() {
     const { x, y } = this.input.consumeLook();
     if (!x && !y) return;
+    const z = this._lookZoom;       // ADS steadies touch aim too
     const cam = this.engine.camera;
     this._euler.setFromQuaternion(cam.quaternion);
-    this._euler.y -= x;
-    this._euler.x -= y;
+    this._euler.y -= x * z;
+    this._euler.x -= y * z;
     const lim = Math.PI / 2 - 0.02;
     this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
     cam.quaternion.setFromEuler(this._euler);
   }
 
+  // Accumulate a view kick from a shot. ADS reduces recoil (steadier aim).
+  _applyRecoil(cfg, ads) {
+    const mul = ads ? 0.6 : 1;
+    const D = Math.PI / 180;
+    this._recoilTarget.x += (cfg.pitch || 0) * D * mul;
+    this._recoilTarget.y += (cfg.yaw || 0) * D * mul * (Math.random() < 0.5 ? -1 : 1);
+  }
+
+  // Rotate the camera by a small pitch/yaw delta, composing with mouse/touch look.
+  _addCameraRot(dPitch, dYaw) {
+    if (!dPitch && !dYaw) return;
+    const cam = this.engine.camera;
+    this._euler.setFromQuaternion(cam.quaternion);
+    this._euler.y += dYaw;
+    this._euler.x += dPitch; // +x looks up
+    const lim = Math.PI / 2 - 0.02;
+    this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
+    cam.quaternion.setFromEuler(this._euler);
+  }
+
+  // ADS blend (FOV zoom + centred viewmodel + steadier aim) and recoil apply/recovery.
+  _updateAdsRecoil(dt) {
+    const playing = this.state === 'playing';
+    const wantAds = playing && this.input.ads && this.player && this.player.alive && !this.player.sprinting;
+    this.weapons.adsActive = wantAds;
+    this._adsT += ((wantAds ? 1 : 0) - this._adsT) * Math.min(1, dt * 14);
+    if (this._adsT < 0.0005) this._adsT = 0;
+
+    // FOV zoom
+    const ac = this.weapons.adsConfig;
+    const fov = this._baseFov + (ac.fov - this._baseFov) * this._adsT;
+    const cam = this.engine.camera;
+    if (Math.abs(cam.fov - fov) > 0.02) { cam.fov = fov; cam.updateProjectionMatrix(); }
+
+    // Centre the viewmodel toward the sightline while aiming.
+    const g = this.weapons.current.group;
+    g.position.x = 0.22 + (0.0 - 0.22) * this._adsT;
+    g.position.y = -0.22 + (-0.135 - -0.22) * this._adsT;
+
+    // Steady the aim: scale look sensitivity by the ADS zoom factor.
+    const zoom = 1 + (ac.zoomMul - 1) * this._adsT;
+    this._lookZoom = zoom;
+    if (this.controls) this.controls.pointerSpeed = this.settings.get('sensitivity') * zoom;
+
+    // Recoil: snap toward the accumulated target, then ease the target back to 0.
+    const rl = Math.min(1, dt * 22);
+    const nx = this._recoil.x + (this._recoilTarget.x - this._recoil.x) * rl;
+    const ny = this._recoil.y + (this._recoilTarget.y - this._recoil.y) * rl;
+    this._addCameraRot(nx - this._recoil.x, ny - this._recoil.y);
+    this._recoil.x = nx; this._recoil.y = ny;
+    const rec = Math.min(1, dt * 8);
+    this._recoilTarget.x += (0 - this._recoilTarget.x) * rec;
+    this._recoilTarget.y += (0 - this._recoilTarget.y) * rec;
+  }
+
+  // World position of the nearest live zombie (for the directional damage arc).
+  _nearestZombiePos() {
+    let best = null, bd = Infinity;
+    const p = this.engine.camera.position;
+    for (const z of this.enemies.zombies) {
+      if (!z.alive) continue;
+      const d = z.group.position.distanceToSquared(p);
+      if (d < bd) { bd = d; best = z; }
+    }
+    return best ? best.group.position : null;
+  }
+
+  // Radial AoE explosion (used by the Mortar killstreak): damage + FX, like a grenade.
+  _explodeAt(pos, radius = 6, baseDmg = 170) {
+    for (const z of this.enemies.zombies) {
+      if (!z.alive) continue;
+      const d = z.group.position.distanceTo(pos);
+      if (d <= radius) {
+        const f = 1 - d / radius;
+        z.takeDamage(Math.max(40, Math.round(baseDmg * f * f + 30)), false);
+      }
+    }
+    this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xffa030, 5);
+    this.shake.add(0.6);
+    this._hitStop = Math.max(this._hitStop, 0.04);
+    this.audio.explosion();
+  }
+
   _loop() {
     requestAnimationFrame(this._loop);
+    this.perf.begin();
     const rawDt = Math.min(this.clock.getDelta(), 0.05);
     let dt = rawDt;
     // hit-stop: briefly slow the world for a punchy impact (real time still elapses)
@@ -366,16 +536,39 @@ export class Game {
       this.damageNumbers.update(dt);
       this.impacts.update(dt);
       this.grenadeMgr.update(dt);
+      this.killstreaks.update(dt);
+      this.dirDmg.update(dt);
       if (this.combo > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
       }
+      if (this._mkTimer > 0) { this._mkTimer -= dt; if (this._mkTimer <= 0) this._mkCount = 0; }
+      // low-health voice + heartbeat vignette
+      const hpFrac = this.player.health / this.player.maxHealth;
+      this.dirDmg.setLowHealth(hpFrac < 0.25 && this.player.alive);
+      if (hpFrac < 0.25 && !this._lowAnnounced) { this.announcer.lowHealth(); this._lowAnnounced = true; }
+      else if (hpFrac > 0.4) this._lowAnnounced = false;
       if (this.enemies.boss && this.enemies.boss.alive) this.hud.setBoss(this.enemies.boss.health / this.enemies.boss.maxHealth);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
       this.hud.setStamina(this.player.stamina, this.player._exhausted);
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);
-      if (!this.player.alive) this._end(false);
+      if (!this.player.alive) {
+        // Self-Revive killstreak: spend it to get back up instead of dying.
+        if (this.killstreaks.consumeRevive()) {
+          this.player.alive = true;
+          this.player.health = this.player.maxHealth * 0.5;
+          this.player._regenT = 0;
+          this.hud.message('SELF-REVIVE', 1600);
+          this.announcer.say('Self revive', { priority: 2 });
+        } else {
+          this._end(false);
+        }
+      }
     }
+
+    // ADS zoom + recoil compose on top of look input (runs every frame so the
+    // view eases back to base FOV when not aiming / not playing).
+    this._updateAdsRecoil(dt);
 
     // Screen shake: layer a transient offset onto the camera for THIS rendered
     // frame only, then revert it so physics/aim are never affected.
@@ -384,5 +577,10 @@ export class Game {
     cam.position.x += sh.x; cam.position.y += sh.y; cam.position.z += sh.z;
     this.engine.render();
     cam.position.x -= sh.x; cam.position.y -= sh.y; cam.position.z -= sh.z;
+
+    // Measure this frame + let the adaptive controller react.
+    const frameMs = this.perf.end();
+    this.perf.setQualityInfo(this.adaptive.info);
+    this.adaptive.update(rawDt, frameMs);
   }
 }

@@ -22,9 +22,15 @@ export class Weapon {
     this.raycaster.far = 140;
     this._dir = new THREE.Vector3();
     this._tmp = new THREE.Vector3();
-    this.tracers = [];
+    this._tracerStart = new THREE.Vector3();
+    this.tracerPool = null;   // shared TracerPool (set by WeaponManager)
+    this._ads = false;        // aiming down sights (set each frame by manager/Game)
+    this.onRecoil = null;     // (recoilCfg, ads) => void  — view kick, handled by Game
     this.onAmmoChange = null;
     this.onHit = null; // (zombie, headshot, point)
+    // Curated raycast target provider: returns the small list of bullet-blocking
+    // meshes + live enemy groups instead of the whole scene graph. Set by Game.
+    this.getTargets = null;
     this._buildModel();
   }
 
@@ -106,12 +112,19 @@ export class Weapon {
     this.mag--;
     this.cooldown = this.cfg.fireInterval;
     this.recoil = 1;
-    this.audio.shoot();
+    this.audio.shoot(this.cfg.type);
     this._muzzle();
     if (this.onShoot) this.onShoot(this.cfg.type);
     const pellets = this.cfg.pellets || 1;
     const acc = new Map();  // aggregate per-zombie damage so a shotgun blast = one number/sound
-    for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1, acc);
+    // Resolve the curated target list once per trigger pull (shared by all pellets).
+    this._targets = this.getTargets ? this.getTargets() : null;
+    // Effective spread: hip-fire bloom vs tight ADS. Falls back to legacy spreadDeg.
+    const spread = this._ads
+      ? (this.cfg.adsSpread ?? 0)
+      : (this.cfg.hipSpread ?? this.cfg.spreadDeg ?? 0);
+    for (let i = 0; i < pellets; i++) this._fireOne(spread, acc);
+    if (this.onRecoil && this.cfg.recoil) this.onRecoil(this.cfg.recoil, this._ads);
     for (const [zomb, e] of acc) {
       this.audio.hit(e.headshot);
       if (this.onHit) this.onHit(zomb, e.headshot, e.point, e.dmg);
@@ -131,17 +144,21 @@ export class Weapon {
     return true;
   }
 
-  _fireOne(spread, acc) {
+  _fireOne(spreadDeg, acc) {
     this.camera.getWorldDirection(this._dir);
-    if (spread) {
-      const s = (this.cfg.spreadDeg || 0) * Math.PI / 180;
+    if (spreadDeg > 0) {
+      const s = spreadDeg * Math.PI / 180;
       this._dir.x += (Math.random() - 0.5) * s;
       this._dir.y += (Math.random() - 0.5) * s;
       this._dir.z += (Math.random() - 0.5) * s;
       this._dir.normalize();
     }
     this.raycaster.set(this.camera.position, this._dir);
-    const hits = this.raycaster.intersectObjects(this.scene.children, true);
+    // Raycast only the curated target list (world solids + live enemies) when
+    // available — far cheaper than recursing the entire scene every pellet.
+    const hits = this._targets
+      ? this.raycaster.intersectObjects(this._targets, true)
+      : this.raycaster.intersectObjects(this.scene.children, true);
     let endPoint = this._tmp.copy(this.camera.position).addScaledVector(this._dir, this.raycaster.far);
     for (const h of hits) {
       if (this._ignored(h.object)) continue;
@@ -151,7 +168,8 @@ export class Weapon {
       const hitZomb = zomb && zomb.alive;
       if (hitZomb) {
         headshot = h.object.userData.part === 'head';
-        const dmg = (headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage) * this.damageMult;
+        let dmg = (headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage) * this.damageMult;
+        dmg *= this._falloff(h.distance);
         zomb.takeDamage(dmg, headshot);
         if (acc) {
           let e = acc.get(zomb);
@@ -168,13 +186,8 @@ export class Weapon {
   _spawnTracer(endWorld) {
     // muzzle world position
     this.group.updateWorldMatrix(true, false);
-    const start = this._muzzlePos.clone().applyMatrix4(this.group.matrixWorld);
-    const geo = new THREE.BufferGeometry().setFromPoints([start, endWorld]);
-    const mat = new THREE.LineBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.9 });
-    const line = new THREE.Line(geo, mat);
-    line.userData.noHit = true;
-    this.scene.add(line);
-    this.tracers.push({ line, ttl: 0.07 });
+    const start = this._tracerStart.copy(this._muzzlePos).applyMatrix4(this.group.matrixWorld);
+    if (this.tracerPool) this.tracerPool.spawn(start, endWorld);
   }
 
   reload() {
@@ -189,6 +202,17 @@ export class Weapon {
     const fs = { shotgun: 1.4, rifle: 1.25, smg: 0.8, pistol: 1 }[this.cfg.type] || 1;
     this.flash.scale.setScalar(fs);
     this.muzzleLight.intensity = { shotgun: 7, rifle: 6.5, smg: 4, pistol: 5 }[this.cfg.type] || 5;
+  }
+
+  // Distance-based damage falloff (COD-style): full damage up to `start`, lerps
+  // down to `minMul` at `end`, then holds. No falloff config = flat damage.
+  _falloff(dist) {
+    const f = this.cfg.falloff;
+    if (!f) return 1;
+    if (dist <= f.start) return 1;
+    if (dist >= f.end) return f.minMul;
+    const k = (dist - f.start) / (f.end - f.start);
+    return 1 + (f.minMul - 1) * k;
   }
 
   _ignored(obj) { let o = obj; while (o) { if (o.userData && o.userData.noHit) return true; o = o.parent; } return false; }
@@ -217,17 +241,7 @@ export class Weapon {
     this.group.rotation.x = this.recoil * (this.cfg.type === 'shotgun' ? 0.26 : 0.18);
     if (this.flash.material.opacity > 0) this.flash.material.opacity = Math.max(0, this.flash.material.opacity - dt * 9);
     if (this.muzzleLight.intensity > 0) this.muzzleLight.intensity = Math.max(0, this.muzzleLight.intensity - dt * 40);
-
-    for (let i = this.tracers.length - 1; i >= 0; i--) {
-      const tr = this.tracers[i];
-      tr.ttl -= dt;
-      tr.line.material.opacity = Math.max(0, (tr.ttl / 0.07) * 0.9);
-      if (tr.ttl <= 0) {
-        this.scene.remove(tr.line);
-        tr.line.geometry.dispose(); tr.line.material.dispose();
-        this.tracers.splice(i, 1);
-      }
-    }
+    // Tracers are now updated centrally by the shared TracerPool (WeaponManager).
   }
 
   reset() {
@@ -235,7 +249,5 @@ export class Weapon {
     this.maxReserve = this.cfg.maxReserve ?? this.reserve;
     this.damageMult = 1; this.reloadMult = 1;
     this.reloading = false; this.cooldown = 0; this.recoil = 0;
-    for (const tr of this.tracers) { this.scene.remove(tr.line); tr.line.geometry.dispose(); tr.line.material.dispose(); }
-    this.tracers = [];
   }
 }

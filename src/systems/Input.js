@@ -5,6 +5,7 @@ export class Input {
   constructor() {
     this.keys = new Set();
     this.mouseDown = false;
+    this.ads = false;      // aim-down-sights (right mouse / touch ADS button)
     this.onShoot = null;   // callback on press
     this.onReload = null;
     this.onPause = null;
@@ -37,23 +38,31 @@ export class Input {
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
 
     window.addEventListener('mousedown', (e) => {
-      if (!this._enabled || e.button !== 0) return;
-      this.mouseDown = true;
-      if (this.onShoot) this.onShoot();
+      if (!this._enabled) return;
+      if (e.button === 0) { this.mouseDown = true; if (this.onShoot) this.onShoot(); }
+      else if (e.button === 2) { this.ads = true; }
     });
-    window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseDown = false; });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.mouseDown = false;
+      else if (e.button === 2) this.ads = false;
+    });
+    // Don't pop the browser context menu when aiming with right-click.
+    window.addEventListener('contextmenu', (e) => { if (this._enabled) e.preventDefault(); });
     window.addEventListener('wheel', () => { if (this._enabled && this.onSwitchNext) this.onSwitchNext(); }, { passive: true });
     window.addEventListener('blur', () => { this.keys.clear(); this.mouseDown = false; this.axisX = 0; this.axisZ = 0; });
   }
 
   setEnabled(v) {
     this._enabled = v;
-    if (!v) { this.keys.clear(); this.mouseDown = false; this.axisX = 0; this.axisZ = 0; this._touchJump = false; }
+    if (!v) { this.keys.clear(); this.mouseDown = false; this.ads = false; this.axisX = 0; this.axisZ = 0; this._touchJump = false; this._touchCrouch = false; }
   }
 
   // --- touch hooks (called by TouchControls) ---
   fireDown() { this.mouseDown = true; if (this._enabled && this.onShoot) this.onShoot(); }
   fireUp() { this.mouseDown = false; }
+  adsDown() { this.ads = true; }
+  adsUp() { this.ads = false; }
+  setCrouch(v) { this._touchCrouch = v; }
   triggerReload() { if (this._enabled && this.onReload) this.onReload(); }
   triggerSwap() { if (this._enabled && this.onSwitchNext) this.onSwitchNext(); }
   setJump(v) { this._touchJump = v; }
@@ -67,6 +76,7 @@ export class Input {
   get right() { return this.isDown('KeyD') || this.isDown('ArrowRight'); }
   get sprint() { return this.isDown('ShiftLeft') || this.isDown('ShiftRight') || this.touchSprint; }
   get jump() { return this.isDown('Space') || this._touchJump; }
+  get crouch() { return this.isDown('ControlLeft') || this.isDown('KeyC') || this._touchCrouch; }
 
   // Combined digital + analog movement, normalised to max length 1.
   moveAxis() {

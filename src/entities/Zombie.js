@@ -23,6 +23,7 @@ export class Zombie {
     this.alive = true;
     this.dead = false;          // fully finished (ready to remove)
     this.attackCd = 0;
+    this.lunge = 0;             // brief forward bite-lean on melee (0..0.4)
     this.flash = 0;
     this.deathT = 0;
     this.onDeath = null;        // (zombie) => void
@@ -41,8 +42,11 @@ export class Zombie {
       : this.variant === 'spitter' ? { skin: 0x6fae3a, cloth: 0x1c3320 }
       : this.variant === 'exploder' ? { skin: 0xc25a1e, cloth: 0x3a1e0c }
       : { skin: 0x5a7a4a, cloth: 0x2c3340 };
-    const skin = new THREE.MeshStandardMaterial({ color: tint.skin, roughness: 0.85, metalness: 0.0 });
-    const cloth = new THREE.MeshStandardMaterial({ color: tint.cloth, roughness: 0.95, metalness: 0.0 });
+    // Lambert (per-vertex lighting) instead of Standard PBR: zombies are low-poly,
+    // always moving, and never reflective — Lambert halves their fragment-shader
+    // cost with no visible difference, and still supports the emissive hit-flash.
+    const skin = new THREE.MeshLambertMaterial({ color: tint.skin });
+    const cloth = new THREE.MeshLambertMaterial({ color: tint.cloth });
     this._mats = [skin, cloth];
 
     const g = new THREE.Group();
@@ -150,6 +154,10 @@ export class Zombie {
     this.legL.rotation.x = swing; this.legR.rotation.x = -swing;
     this.armL.rotation.x = -1.3 + Math.sin(t * 7) * 0.15;
     this.armR.rotation.x = -1.3 - Math.sin(t * 7) * 0.15;
+
+    // lunge bite: lean the torso in toward the player on a melee hit, then ease back
+    if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 2.5);
+    this.group.rotation.x = -this.lunge * 0.5;
 
     // hit flash (emissive red pulse on shared mats — brief, looks fine)
     if (this.flash > 0) {

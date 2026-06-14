@@ -34,17 +34,30 @@ export class Audio {
     const src = this.ctx.createBufferSource(); src.buffer = buf; return src;
   }
 
-  shoot() {
+  // Per-weapon gunshot. Each type gets its own oscillator sweep + noise crack so
+  // the four guns read distinctly by ear (a core COD feel).
+  shoot(type = 'pistol') {
     if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
+    const P = {
+      pistol:  { f0: 520, f1: 90,  oscDur: 0.12, oscPk: 0.5,  hp: 1400, nzDur: 0.10, nzPk: 0.35, wave: 'square' },
+      shotgun: { f0: 280, f1: 50,  oscDur: 0.20, oscPk: 0.75, hp: 800,  nzDur: 0.16, nzPk: 0.5,  wave: 'square', tail: true },
+      smg:     { f0: 600, f1: 120, oscDur: 0.08, oscPk: 0.4,  hp: 1800, nzDur: 0.06, nzPk: 0.3,  wave: 'square' },
+      rifle:   { f0: 380, f1: 60,  oscDur: 0.15, oscPk: 0.6,  hp: 1000, nzDur: 0.12, nzPk: 0.4,  wave: 'sawtooth' },
+    }[type] || null;
+    const c = P || { f0: 420, f1: 70, oscDur: 0.14, oscPk: 0.5, hp: 1200, nzDur: 0.12, nzPk: 0.35, wave: 'square' };
     const t = this.ctx.currentTime;
-    // punchy low thump
-    const osc = this.ctx.createOscillator(); osc.type = 'square';
-    osc.frequency.setValueAtTime(420, t); osc.frequency.exponentialRampToValueAtTime(70, t + 0.12);
-    this._env(osc, t, 0.14, 0.5); osc.start(t); osc.stop(t + 0.16);
-    // crack of noise
-    const nz = this._noise(0.12); const bp = this.ctx.createBiquadFilter();
-    bp.type = 'highpass'; bp.frequency.value = 1200; nz.connect(bp);
-    this._env(bp, t, 0.1, 0.35); nz.start(t); nz.stop(t + 0.12);
+    const osc = this.ctx.createOscillator(); osc.type = c.wave;
+    osc.frequency.setValueAtTime(c.f0, t); osc.frequency.exponentialRampToValueAtTime(c.f1, t + c.oscDur);
+    this._env(osc, t, c.oscDur + 0.02, c.oscPk); osc.start(t); osc.stop(t + c.oscDur + 0.04);
+    const nz = this._noise(c.nzDur); const bp = this.ctx.createBiquadFilter();
+    bp.type = 'highpass'; bp.frequency.value = c.hp; nz.connect(bp);
+    this._env(bp, t, c.nzDur, c.nzPk); nz.start(t); nz.stop(t + c.nzDur + 0.02);
+    // Shotgun gets a low-passed bassy body tail for weight.
+    if (c.tail) {
+      const tn = this._noise(0.16); const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 600; tn.connect(lp);
+      this._env(lp, t, 0.15, 0.4); tn.start(t); tn.stop(t + 0.16);
+    }
   }
 
   explosion() {

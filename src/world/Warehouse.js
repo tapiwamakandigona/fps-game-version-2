@@ -12,6 +12,7 @@ export class Warehouse {
     scene.add(this.root);
     this.name = 'WAREHOUSE';
     this.colliders = [];        // THREE.Box3[]
+    this.solids = [];           // bullet-blocking meshes (curated raycast target list)
     this.enemySpawns = [];      // THREE.Vector3[]
     this.lamps = [];            // fl:cker-able point lights
     this.playerSpawn = new THREE.Vector3(0, 1.7, ARENA_HALF - 4);
@@ -52,6 +53,7 @@ export class Warehouse {
     if (collide) {
       const box = new THREE.Box3().setFromObject(mesh);
       this.colliders.push(box);
+      this.solids.push(mesh);   // bullets stop on this surface
     }
     return mesh;
   }
@@ -63,12 +65,14 @@ export class Warehouse {
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.root.add(floor);
+    this.solids.push(floor);   // bullets that miss hit the floor
 
     // Ceiling
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(H * 2, H * 2), this.matWall);
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = 9;
     this.root.add(ceil);
+    this.solids.push(ceil);
 
     // Outer walls (thickness 1, height 9)
     const t = 1, wallH = 9, yC = wallH / 2;
@@ -119,6 +123,7 @@ export class Warehouse {
     }
     crates.instanceMatrix.needsUpdate = true;
     this.root.add(crates);
+    this.solids.push(crates);
 
     // Enemy spawn points (far half of the arena + corners).
     for (const p of [[-20, -20], [20, -20], [0, -21], [-21, 0], [21, 0], [-18, -10], [18, -10]]) {
@@ -131,6 +136,7 @@ export class Warehouse {
     const body = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 4), this.matContainer);
     body.castShadow = true; body.receiveShadow = true;
     g.add(body);
+    this.solids.push(body);
     g.position.set(x, 2.5, z);
     g.rotation.y = rotY;
     this.root.add(g);
@@ -196,6 +202,6 @@ export class Warehouse {
     for (const m of [this.matFloor, this.matWall, this.matMetal, this.matCrate, this.matContainer]) {
       if (m) m.dispose();
     }
-    this.colliders.length = 0; this.enemySpawns.length = 0; this.lamps.length = 0;
+    this.colliders.length = 0; this.solids.length = 0; this.enemySpawns.length = 0; this.lamps.length = 0;
   }
 }
