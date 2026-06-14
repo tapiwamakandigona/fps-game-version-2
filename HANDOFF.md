@@ -95,7 +95,7 @@ Key modules:
 - `src/entities/Player.js` — movement, sprint + stamina, crouch + slide, view bob, landing
   dip. Has **no audio reference**; emits a `this.onFootstep(intensity)` callback on each
   foot-plant (Game wires it to `audio.footstep`). `constructor(camera, colliders)`.
-- `src/enemies/EnemyManager.js` + `Zombie.js` — wave spawning (boss every 5th wave),
+- `src/entities/EnemyManager.js` + `src/entities/Zombie.js` — wave spawning (boss every 5th wave),
   enemy variants (spitter / exploder / boss / melee / brute), stun state.
 - `src/systems/`:
   - `Audio.js` — WebAudio synth. Helpers `_env`/`_noise`/`_tones`. Sounds: shoot/explosion/
@@ -105,6 +105,9 @@ Key modules:
   - `Perf.js` — `PerfMeter` + `AdaptiveQuality` (drops quality if fps sags).
   - `Announcer.js`, `Killstreaks.js`, `ScreenShake.js`, `ShellEjector.js` (pooled brass),
     `Settings.js`.
+- `src/ui/` — HUD and on-screen UI helpers (hitmarker, kill feed rendering, etc.).
+- `src/world/` — level/arena geometry + colliders (all procedural; `world.colliders` is the
+  raycast/collision list the Player and weapons use).
 - `index.html` — HUD (`#ammo` block: weapon name/counts/reserve/nade/flash), menu / pause /
   end-screen overlays, fullscreen button + in-game `⛶` toggle (`.touch-only`), `#build-tag`.
 - `styles.css` — desktop + `body.is-touch` mobile rules. On touch: compact ammo readout
@@ -185,15 +188,18 @@ animation + idle sway.
 
 - **Confirm the mouse spike-fix with Lisa** on a hard-refreshed load (§6.2). Top priority —
   it's her main concern.
-- **AI 3D / mocap tooling research (requested by Lisa):** SCAIL 2, VideoMDM, AnchorWorld,
-  World Tracing, MeshFlow — tools for generating 3D meshes / transferring motion / first-person
-  world sim. **Tension to resolve before adopting any:** they produce **binary assets**
-  (meshes, mocap, textures) which directly conflict with constraints §2.1 (buildless) and
-  §2.2 (no binary assets), and would threaten the mobile-60fps budget (§2.3). The honest path
-  is likely: keep the shipping game procedural/buildless, and only consider these for a separate
-  higher-fidelity branch/build with a real asset pipeline — or borrow their *ideas* (motion
-  curves, layout) to improve our procedural animation without importing heavy assets. (A written
-  assessment was being prepared for Lisa.)
+- **AI 3D / mocap tooling — EXPLORED AND PARKED (do not pursue unless Lisa revisits).**
+  Lisa asked us to evaluate SCAIL-2, VideoMDM, AnchorWorld, World Tracing (DUSt3R-family),
+  and MeshFlow (all June-2026 research papers) for generating meshes / transferring motion /
+  first-person world sim. **Conclusion delivered & accepted: none fit this game.** Every one
+  outputs a **binary asset** (mesh, mocap clip, or generated video), which conflicts with
+  constraints §2.1 (buildless) and §2.2 (no binary assets) and threatens the mobile-60fps
+  budget (§2.3); they're also research code needing a GPU + the authors' repos (no turnkey
+  product yet). On 2026-06-14 Lisa said to drop it ("nah forget it"). If it's ever revisited,
+  the only honest path is a **separate higher-fidelity desktop build** with a real asset
+  pipeline (GLTF loading, rigged/skinned characters) — that build will NOT hit low-end-phone
+  60fps. Alternatively, borrow only their *ideas* (e.g. motion curves) to hand-tune our
+  procedural animation without importing assets. **Default: keep the live game lean & procedural.**
 - **Possible future polish ideas** (all must respect §2): enemy hit-flinch/death animations,
   weapon-bob synced more tightly to footsteps, landing thud audio, more weapon variety,
   objective/mutator modes.
