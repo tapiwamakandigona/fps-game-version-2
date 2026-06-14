@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { LookControls } from '../systems/LookControls.js';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -49,7 +49,7 @@ export class Game {
     this.touch = isTouchDevice();
     this.touchControls = new TouchControls(this.input, document.getElementById('game-container'));
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
-    this.controls = new PointerLockControls(this.engine.camera, this.engine.renderer.domElement);
+    this.controls = new LookControls(this.engine.camera, this.engine.renderer.domElement);
     // Camera must live in the scene graph so the weapon viewmodel (a child of the
     // camera) gets rendered.
     this.engine.scene.add(this.engine.camera);
@@ -434,6 +434,9 @@ export class Game {
     this.announcer.cancelAll();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
+    // Level the view for a fresh run (clear any leftover pitch/recoil).
+    this.controls.pitch = 0; this.controls.setRecoil(0, 0);
+    this.controls.update();
     this.weapons.reset();
     this.hud.setHealth(this.player.health, this.player.maxHealth);
     this.hud.showHud(true);
@@ -479,15 +482,15 @@ export class Game {
 
   _applyTouchLook() {
     const { x, y } = this.input.consumeLook();
-    if (!x && !y) return;
-    const z = this._lookZoom;       // ADS steadies touch aim too
-    const cam = this.engine.camera;
-    this._euler.setFromQuaternion(cam.quaternion);
-    this._euler.y -= x * z;
-    this._euler.x -= y * z;
-    const lim = Math.PI / 2 - 0.02;
-    this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
-    cam.quaternion.setFromEuler(this._euler);
+    const z = this._lookZoom;             // ADS steadies touch aim too
+    const sens = this.settings.get('sensitivity'); // the slider now drives touch as well
+    // Gentle one-frame smoothing damps Android touch jitter without adding much lag.
+    this._tlx = (this._tlx || 0) * 0.35 + x * 0.65;
+    this._tly = (this._tly || 0) * 0.35 + y * 0.65;
+    if (Math.abs(this._tlx) < 1e-5 && Math.abs(this._tly) < 1e-5) return;
+    // Feed deltas into the authoritative look model (clamped internally) — no
+    // per-frame quaternion decomposition, so no gimbal jerk near vertical.
+    this.controls.addYawPitch(-this._tlx * z * sens, -this._tly * z * sens);
   }
 
   // Accumulate a view kick from a shot. ADS reduces recoil (steadier aim).
@@ -496,18 +499,6 @@ export class Game {
     const D = Math.PI / 180;
     this._recoilTarget.x += (cfg.pitch || 0) * D * mul;
     this._recoilTarget.y += (cfg.yaw || 0) * D * mul * (Math.random() < 0.5 ? -1 : 1);
-  }
-
-  // Rotate the camera by a small pitch/yaw delta, composing with mouse/touch look.
-  _addCameraRot(dPitch, dYaw) {
-    if (!dPitch && !dYaw) return;
-    const cam = this.engine.camera;
-    this._euler.setFromQuaternion(cam.quaternion);
-    this._euler.y += dYaw;
-    this._euler.x += dPitch; // +x looks up
-    const lim = Math.PI / 2 - 0.02;
-    this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
-    cam.quaternion.setFromEuler(this._euler);
   }
 
   // ADS blend (FOV zoom + centred viewmodel + steadier aim) and recoil apply/recovery.
@@ -539,7 +530,8 @@ export class Game {
     const rl = Math.min(1, dt * 22);
     const nx = this._recoil.x + (this._recoilTarget.x - this._recoil.x) * rl;
     const ny = this._recoil.y + (this._recoilTarget.y - this._recoil.y) * rl;
-    this._addCameraRot(nx - this._recoil.x, ny - this._recoil.y);
+    // Recoil is a transient additive view offset — the look model recovers exactly.
+    this.controls.setRecoil(nx, ny);
     this._recoil.x = nx; this._recoil.y = ny;
     const rec = Math.min(1, dt * 8);
     this._recoilTarget.x += (0 - this._recoilTarget.x) * rec;
@@ -587,6 +579,7 @@ export class Game {
 
     if (this.state === 'playing') {
       if (this.touch) this._applyTouchLook();
+      this.controls.update();   // compose fresh aim before movement reads it
       this.player.update(dt, this.input);
       this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
@@ -638,6 +631,7 @@ export class Game {
     // ADS zoom + recoil compose on top of look input (runs every frame so the
     // view eases back to base FOV when not aiming / not playing).
     this._updateAdsRecoil(dt);
+    this.controls.update();   // bake look + recoil into the orientation we render
 
     // Screen shake: layer a transient offset onto the camera for THIS rendered
     // frame only, then revert it so physics/aim are never affected.
