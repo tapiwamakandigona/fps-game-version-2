@@ -24,6 +24,7 @@ import { Minimap } from '../ui/Minimap.js';
 import { DamageNumbers } from '../ui/DamageNumbers.js';
 import { Impacts } from '../ui/Impacts.js';
 import { ScreenShake } from '../systems/ScreenShake.js';
+import { ShellEjector } from '../systems/ShellEjector.js';
 import { UpgradeShop } from '../ui/UpgradeShop.js';
 import { PerfMeter, AdaptiveQuality } from '../systems/Perf.js';
 import { Announcer } from '../systems/Announcer.js';
@@ -104,6 +105,7 @@ export class Game {
     this.damageNumbers = new DamageNumbers(this.engine.camera, document.getElementById('hud'));
     this.impacts = new Impacts(this.engine.scene, this.engine.camera);
     this.shake = new ScreenShake();
+    this.shells = new ShellEjector(this.engine.scene, this.engine.camera);
     this._hitStop = 0;
     this.grenadeMgr = new GrenadeManager(this.engine.scene, this.engine.camera, () => this.enemies.zombies, 24);
     this.grenadeMgr.onChange = (n) => this.hud.setGrenades(n);
@@ -163,8 +165,10 @@ export class Game {
     };
     this.player.onSlide = () => { this.shake.add(0.18); };
     // Juice: shake on fire, sparks at impact points.
-    this.weapons.onShoot = (type) => this.shake.add(
-      { shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
+    this.weapons.onShoot = (type) => {
+      this.shake.add({ shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
+      this.shells.eject();   // brass casing flips out of the ejection port
+    };
     this.weapons.onRecoil = (cfg, ads) => this._applyRecoil(cfg, ads);
     // ADS / recoil state.
     this._baseFov = this.engine.camera.fov;
@@ -589,6 +593,7 @@ export class Game {
       this.pickups.update(dt, this.engine.camera.position);
       this.damageNumbers.update(dt);
       this.impacts.update(dt);
+      this.shells.update(dt);
       this.grenadeMgr.update(dt);
       this.killstreaks.update(dt);
       this.dirDmg.update(dt);
