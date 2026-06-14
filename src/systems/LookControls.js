@@ -22,6 +22,7 @@ export class LookControls {
     this.pitch = 0;             // authoritative elevation (radians), clamped
     this._recoilPitch = 0;       // transient view kick (added at compose time)
     this._recoilYaw = 0;
+    this._emaMag = 0;            // running estimate of typical per-event mouse delta
 
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this._listeners = { lock: [], unlock: [], change: [] };
@@ -51,8 +52,24 @@ export class LookControls {
 
   _onMouseMove(e) {
     if (!this.isLocked) return;
-    const mx = e.movementX || 0;
-    const my = e.movementY || 0;
+    let mx = e.movementX || 0;
+    let my = e.movementY || 0;
+    // --- Pointer-lock spike rejection ---
+    // Chromium (and occasionally other engines) sporadically reports a single huge
+    // movementX/Y under pointer lock — an isolated delta orders of magnitude larger
+    // than the surrounding motion. Raw, that shows up as the camera "jumping" while
+    // you're looking slowly up/down standing still. We cap each event to an adaptive
+    // ceiling that tracks recent motion (so genuine fast flicks pass untouched) with a
+    // sane floor + hard cap so a stray spike can't teleport the view.
+    const mag = Math.hypot(mx, my);
+    const ceiling = Math.min(300, Math.max(45, this._emaMag * 6));
+    if (mag > ceiling && mag > 0) {
+      const s = ceiling / mag;
+      mx *= s; my *= s;
+    }
+    // Track the (clamped) magnitude so sustained fast motion opens the ceiling within
+    // a frame or two — a real flick passes; an isolated 1-event spike stays capped.
+    this._emaMag += (Math.min(mag, ceiling) - this._emaMag) * 0.35;
     // raw 1:1 mapping (no smoothing) keeps mouse aim crisp & responsive
     this.yaw -= mx * 0.002 * this.pointerSpeed;
     this.pitch -= my * 0.002 * this.pointerSpeed;

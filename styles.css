@@ -111,8 +111,8 @@ body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 11
 /* Thumb cluster anchored to the bottom-right: FIRE sits in the corner with ADS
    beside it; JUMP/RELOAD/CROUCH within easy reach; small utilities (SWAP/NADE/
    FLASH) along the top of the cluster. Right-thumb friendly on phones. */
-#touch-buttons { position: absolute; right: 20px; bottom: 18px; z-index: 3;
-  display: grid; gap: 11px; pointer-events: none;
+#touch-buttons { position: absolute; right: 16px; bottom: 14px; z-index: 3;
+  display: grid; gap: 8px; pointer-events: none;
   justify-items: center; align-items: end;
   grid-template-columns: repeat(3, auto);
   grid-template-areas:
@@ -127,9 +127,9 @@ body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 11
   background: rgba(20,28,42,0.5); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.45);
   transition: transform 0.06s, background 0.1s; display: flex; align-items: center; justify-content: center; }
 .t-btn:active { transform: scale(0.9); background: rgba(127,178,255,0.4); }
-.t-mini { width: 58px; height: 58px; font-size: 10px; opacity: 0.92; }
-.t-small { width: 76px; height: 76px; font-size: 13px; }
-.t-fire { width: 112px; height: 112px; font-size: 19px; color: #fff;
+.t-mini { width: 50px; height: 50px; font-size: 9px; opacity: 0.9; }
+.t-small { width: 64px; height: 64px; font-size: 12px; }
+.t-fire { width: 98px; height: 98px; font-size: 18px; color: #fff;
   border-color: rgba(255,107,94,0.6); background: rgba(120,30,26,0.5); }
 .t-fire:active { background: rgba(255,107,94,0.45); }
 
@@ -139,23 +139,47 @@ body.is-touch .reload-key { display: none; }
 @media (max-width: 560px) {
   #joystick { width: 120px; height: 120px; left: 16px; bottom: 16px; }
   #joy-knob { width: 52px; height: 52px; }
-  #touch-buttons { right: 14px; bottom: 14px; gap: 9px; }
-  .t-mini { width: 50px; height: 50px; font-size: 9px; }
-  .t-small { width: 66px; height: 66px; font-size: 12px; }
-  .t-fire { width: 96px; height: 96px; font-size: 16px; }
+  #touch-buttons { right: 12px; bottom: 12px; gap: 7px; }
+  .t-mini { width: 44px; height: 44px; font-size: 8px; }
+  .t-small { width: 56px; height: 56px; font-size: 11px; }
+  .t-fire { width: 86px; height: 86px; font-size: 15px; }
   .controls-help { grid-template-columns: repeat(2,auto); }
   .panel { padding: 28px 30px; }
   .panel h1 { font-size: 40px; }
 }
 
-/* On touch, lift the ammo readout above the FIRE button so it stays visible */
+/* On touch, dock a COMPACT ammo readout low at the bottom-centre (out of the
+   look area and clear of the joystick / fire cluster). */
 body.is-touch #ammo { right: auto; left: 50%; transform: translateX(-50%);
-  bottom: 70px; text-align: center; }
+  bottom: 6px; text-align: center; line-height: 1.05; }
+body.is-touch #ammo-name { font-size: 11px; letter-spacing: 1px; }
+body.is-touch #ammo-counts { font-size: 22px; }
+body.is-touch #ammo-reserve { font-size: 10px; }
+/* Grenade / flashbang counts sit inline so the block stays short. */
+body.is-touch #ammo-nade, body.is-touch #ammo-flash {
+  display: inline-block; font-size: 10px; margin: 1px 5px 0; }
 body.is-touch #score { font-size: 20px; }
 @media (max-width: 560px) {
-  body.is-touch #ammo-counts { font-size: 26px; }
-  body.is-touch #ammo { bottom: 64px; }
+  body.is-touch #ammo-counts { font-size: 20px; }
 }
+
+/* Touch-only elements are hidden unless the device is touch-enabled. */
+.touch-only { display: none; }
+body.is-touch .touch-only { display: block; }
+
+/* In-game fullscreen toggle: small, unobtrusive, just left of the minimap. */
+#fs-toggle { position: absolute; top: 12px; right: 128px;
+  z-index: 16; width: 38px; height: 34px; border-radius: 9px; font-size: 17px;
+  line-height: 1; color: #eaf2ff; border: 2px solid rgba(127,178,255,0.4);
+  background: rgba(20,28,42,0.5); box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+  pointer-events: auto; touch-action: manipulation; }
+#fs-toggle:active { background: rgba(127,178,255,0.4); }
+
+/* Build-version stamp: faint, bottom-right corner, confirms the deployed build. */
+#build-tag { position: absolute; right: 8px; bottom: 6px; z-index: 30;
+  font-size: 10px; letter-spacing: 0.5px; color: rgba(180,196,220,0.45);
+  pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+body.is-touch #build-tag { bottom: 2px; right: 6px; font-size: 9px; }
 
 /* ---------- Settings panel ---------- */
 .btn-secondary { background: rgba(20,28,42,0.7); color: #cfe0ff;

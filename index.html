@@ -63,6 +63,7 @@
         <button id="start-btn">CLICK TO PLAY</button>
         <button id="endless-btn" class="btn-secondary">ENDLESS: OFF</button>
         <button id="settings-btn" class="btn-secondary">SETTINGS</button>
+        <button id="fullscreen-btn" class="btn-secondary touch-only">FULLSCREEN</button>
         <div class="controls-help">
           <span><b>WASD</b> move</span><span><b>Mouse</b> look</span><span><b>Click</b> shoot</span>
           <span><b>R-Click</b> aim</span><span><b>Ctrl</b> crouch</span><span><b>Sprint+Ctrl</b> slide</span>
@@ -94,6 +95,11 @@
     <div id="loading" class="overlay">
       <div class="panel"><h2>Loading…</h2><p class="tagline">Fetching engine</p></div>
     </div>
+
+    <!-- In-game fullscreen toggle (touch only) -->
+    <button id="fs-toggle" class="touch-only" aria-label="Toggle fullscreen">⛶</button>
+    <!-- Build version stamp (confirms you're on the latest deploy) -->
+    <div id="build-tag"></div>
   </div>
 
   <script type="module" src="src/main.js"></script>
