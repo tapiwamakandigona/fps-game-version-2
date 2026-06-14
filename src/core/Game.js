@@ -3,7 +3,7 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v11 · 2026-06-14';
+export const BUILD = 'v12 · 2026-06-14';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -102,6 +102,7 @@ export class Game {
     this.world = new ARENAS[this.arenaIdx].cls(this.engine.scene);
     this._freezeStaticWorld();
     this.player = new Player(this.engine.camera, this.world.colliders);
+    this.player.onFootstep = (i) => this.audio.footstep(i);
     this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
     this.pickups = new PickupManager(this.engine.scene);
