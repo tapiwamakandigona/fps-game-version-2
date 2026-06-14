@@ -220,6 +220,7 @@ export class Weapon {
   reload() {
     if (this.reloading || this.mag === this.magSize || this.reserve <= 0) return;
     this.reloading = true; this.reloadT = this.cfg.reloadTime * this.reloadMult;
+    this._reloadTotal = this.reloadT;
     this.audio.reload();
   }
 
@@ -264,8 +265,34 @@ export class Weapon {
     }
 
     this.recoil = Math.max(0, this.recoil - dt * 7);
-    this.group.position.z = this._baseZ + this.recoil * (this.cfg.type === 'shotgun' ? 0.1 : 0.06);
-    this.group.rotation.x = this.recoil * (this.cfg.type === 'shotgun' ? 0.26 : 0.18);
+
+    // --- Reload animation: a two-beat mag-swap gesture (dip + roll out, then seat
+    // the mag and rack back up). Driven off reload progress; uses rotation + Z only
+    // so it never fights the ADS viewmodel centering (which owns position x/y). ---
+    let reZ = 0, reRoll = 0, reYaw = 0, rePitch = 0;
+    if (this.reloading && this._reloadTotal) {
+      const p = Math.min(1, Math.max(0, 1 - this.reloadT / this._reloadTotal)); // 0..1
+      const env = Math.sin(p * Math.PI);          // smooth rise then fall (peak mid-reload)
+      const seat = Math.max(0, Math.sin((p - 0.55) * Math.PI * 2)) * (p > 0.55 ? 1 : 0); // little rack at the end
+      reZ = 0.06 * env;                            // pull the gun back toward the player
+      reRoll = 0.7 * env;                          // roll to expose the magazine well
+      reYaw = 0.32 * env;                          // tilt inward
+      rePitch = 0.45 * env - 0.12 * seat;          // dip the muzzle, then snap up to chamber
+    } else {
+      // Subtle idle/breathing sway — purely cosmetic (viewmodel only; aim is from the
+      // camera centre). Damped while aiming so ADS stays steady.
+      this._swayT = (this._swayT || 0) + dt;
+      const a = this._ads ? 0.25 : 1;
+      reYaw = Math.cos(this._swayT * 1.1) * 0.018 * a;
+      reRoll = Math.sin(this._swayT * 1.3) * 0.014 * a;
+      rePitch = Math.sin(this._swayT * 2.1) * 0.010 * a;
+    }
+
+    const recPitch = this.recoil * (this.cfg.type === 'shotgun' ? 0.26 : 0.18);
+    this.group.position.z = this._baseZ + this.recoil * (this.cfg.type === 'shotgun' ? 0.1 : 0.06) + reZ;
+    this.group.rotation.x = recPitch + rePitch;
+    this.group.rotation.y = reYaw;
+    this.group.rotation.z = reRoll;
     if (this.flash.material.opacity > 0) this.flash.material.opacity = Math.max(0, this.flash.material.opacity - dt * 9);
     if (this.muzzleLight.intensity > 0) this.muzzleLight.intensity = Math.max(0, this.muzzleLight.intensity - dt * 40);
     // Tracers are now updated centrally by the shared TracerPool (WeaponManager).

@@ -104,26 +104,41 @@ body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 11
   background: radial-gradient(circle at 40% 35%, #cfe0ff, #7fb2ff);
   box-shadow: 0 3px 14px rgba(0,0,0,0.5); }
 
-#touch-buttons { position: absolute; right: 22px; bottom: 22px; z-index: 3;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 12px; pointer-events: none; }
+/* Thumb cluster anchored to the bottom-right: FIRE sits in the corner with ADS
+   beside it; JUMP/RELOAD/CROUCH within easy reach; small utilities (SWAP/NADE/
+   FLASH) along the top of the cluster. Right-thumb friendly on phones. */
+#touch-buttons { position: absolute; right: 20px; bottom: 18px; z-index: 3;
+  display: grid; gap: 11px; pointer-events: none;
+  justify-items: center; align-items: end;
+  grid-template-columns: repeat(3, auto);
+  grid-template-areas:
+    "swap   nade   flash"
+    "reload jump   crouch"
+    ".      ads    fire"; }
+#t-swap { grid-area: swap; } #t-nade { grid-area: nade; } #t-flash { grid-area: flash; }
+#t-reload { grid-area: reload; } #t-jump { grid-area: jump; } #t-crouch { grid-area: crouch; }
+#t-ads { grid-area: ads; } #t-fire { grid-area: fire; }
 .t-btn { pointer-events: auto; touch-action: none; margin: 0; font-family: inherit; font-weight: 800;
-  letter-spacing: 1px; color: #eaf2ff; border: 2px solid rgba(127,178,255,0.45);
-  background: rgba(20,28,42,0.55); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.45);
-  transition: transform 0.06s, background 0.1s; }
-.t-btn:active { transform: scale(0.92); background: rgba(127,178,255,0.35); }
-.t-small { width: 78px; height: 78px; font-size: 13px; }
-.t-fire { width: 116px; height: 116px; font-size: 20px; color: #fff;
-  border-color: rgba(255,107,94,0.6); background: rgba(120,30,26,0.55); }
+  letter-spacing: 0.5px; color: #eaf2ff; border: 2px solid rgba(127,178,255,0.45);
+  background: rgba(20,28,42,0.5); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+  transition: transform 0.06s, background 0.1s; display: flex; align-items: center; justify-content: center; }
+.t-btn:active { transform: scale(0.9); background: rgba(127,178,255,0.4); }
+.t-mini { width: 58px; height: 58px; font-size: 10px; opacity: 0.92; }
+.t-small { width: 76px; height: 76px; font-size: 13px; }
+.t-fire { width: 112px; height: 112px; font-size: 19px; color: #fff;
+  border-color: rgba(255,107,94,0.6); background: rgba(120,30,26,0.5); }
 .t-fire:active { background: rgba(255,107,94,0.45); }
 
 /* Hide the [R] reload hint on touch where it's not relevant */
 body.is-touch .reload-key { display: none; }
 
 @media (max-width: 560px) {
-  #joystick { width: 116px; height: 116px; left: 18px; bottom: 18px; }
-  #joy-knob { width: 50px; height: 50px; }
+  #joystick { width: 120px; height: 120px; left: 16px; bottom: 16px; }
+  #joy-knob { width: 52px; height: 52px; }
+  #touch-buttons { right: 14px; bottom: 14px; gap: 9px; }
+  .t-mini { width: 50px; height: 50px; font-size: 9px; }
   .t-small { width: 66px; height: 66px; font-size: 12px; }
-  .t-fire { width: 98px; height: 98px; font-size: 17px; }
+  .t-fire { width: 96px; height: 96px; font-size: 16px; }
   .controls-help { grid-template-columns: repeat(2,auto); }
   .panel { padding: 28px 30px; }
   .panel h1 { font-size: 40px; }
