@@ -38,4 +38,4 @@ off and logs it in `CHANGELOG.md`. Add new ideas to the backlog freely.
 - [x] v2.13 More weapons: SMG + rifle + throwable grenade (keys 3/4/G)
 - [x] v2.14 Enemy variety: ranged spitter + exploder
 - [ ] v2.15 Second arena / new level layout
-- [ ] v2.16 Between-wave upgrade shop (spend score)
+- [x] v2.16 Upgrade shop: spend score between waves (HP/damage/reload/ammo/grenades)

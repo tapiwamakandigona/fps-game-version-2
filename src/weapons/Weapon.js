@@ -14,6 +14,8 @@ export class Weapon {
     this.mag = cfg.mag;
     this.reserve = cfg.reserve ?? Infinity;   // pistol = ∞ (always-usable fallback)
     this.maxReserve = cfg.maxReserve ?? this.reserve;
+    this.damageMult = 1;   // raised by the FIREPOWER upgrade
+    this.reloadMult = 1;   // lowered by the FAST HANDS upgrade
     this.cooldown = 0; this.reloadT = 0; this.reloading = false;
     this.recoil = 0;
     this.raycaster = new THREE.Raycaster();
@@ -149,7 +151,7 @@ export class Weapon {
       const hitZomb = zomb && zomb.alive;
       if (hitZomb) {
         headshot = h.object.userData.part === 'head';
-        const dmg = headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage;
+        const dmg = (headshot ? this.cfg.damage * this.cfg.headshotMult : this.cfg.damage) * this.damageMult;
         zomb.takeDamage(dmg, headshot);
         if (acc) {
           let e = acc.get(zomb);
@@ -177,7 +179,7 @@ export class Weapon {
 
   reload() {
     if (this.reloading || this.mag === this.magSize || this.reserve <= 0) return;
-    this.reloading = true; this.reloadT = this.cfg.reloadTime;
+    this.reloading = true; this.reloadT = this.cfg.reloadTime * this.reloadMult;
     this.audio.reload();
   }
 
@@ -230,6 +232,8 @@ export class Weapon {
 
   reset() {
     this.mag = this.magSize; this.reserve = this.cfg.reserve ?? Infinity;
+    this.maxReserve = this.cfg.maxReserve ?? this.reserve;
+    this.damageMult = 1; this.reloadMult = 1;
     this.reloading = false; this.cooldown = 0; this.recoil = 0;
     for (const tr of this.tracers) { this.scene.remove(tr.line); tr.line.geometry.dispose(); tr.line.material.dispose(); }
     this.tracers = [];

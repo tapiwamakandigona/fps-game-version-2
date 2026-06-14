@@ -24,6 +24,8 @@ export class EnemyManager {
     this.interT = 0;
     this.onWaveStart = null;   // (wave) => void
     this.onIntermission = null;// (nextWave, seconds) => void
+    this.onWaveCleared = null; // (nextWave) => void  — fired once when a wave is cleared
+    this.holdIntermission = false; // when true, the between-wave countdown is paused (shop open)
     this.onKill = null;        // (zombie, score) => void
     this.onVictory = null;
     this.onBossSpawn = null;   // (boss) => void
@@ -201,11 +203,12 @@ export class EnemyManager {
       } else {
         this.state = 'intermission';
         this.interT = INTERMISSION;
+        if (this.onWaveCleared) this.onWaveCleared(this.wave + 1);
         if (this.onIntermission) this.onIntermission(this.wave + 1, Math.ceil(this.interT));
       }
     }
 
-    if (this.state === 'intermission') {
+    if (this.state === 'intermission' && !this.holdIntermission) {
       const prev = Math.ceil(this.interT);
       this.interT -= dt;
       const now = Math.ceil(this.interT);
@@ -219,5 +222,6 @@ export class EnemyManager {
     this.zombies = [];
     for (let i = this.spits.length - 1; i >= 0; i--) this._removeSpit(i);
     this.wave = 0; this.toSpawn = 0; this.state = 'idle'; this.boss = null;
+    this.holdIntermission = false;
   }
 }

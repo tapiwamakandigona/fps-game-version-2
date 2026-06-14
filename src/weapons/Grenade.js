@@ -82,6 +82,7 @@ export class GrenadeManager {
 
   reset() {
     for (let i = this.grenades.length - 1; i >= 0; i--) this._remove(i);
+    this.maxCount = 3;   // clear DEMOLITION upgrades on a fresh run
     this.count = this.maxCount;
     if (this.onChange) this.onChange(this.count);
   }

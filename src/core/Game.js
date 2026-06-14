@@ -24,6 +24,7 @@ import { Minimap } from '../ui/Minimap.js';
 import { DamageNumbers } from '../ui/DamageNumbers.js';
 import { Impacts } from '../ui/Impacts.js';
 import { ScreenShake } from '../systems/ScreenShake.js';
+import { UpgradeShop } from '../ui/UpgradeShop.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -91,6 +92,12 @@ export class Game {
     };
     this.combo = 0; this.comboTimer = 0;
 
+    this.shop = new UpgradeShop();
+    this.shop.getScore = () => this.score;
+    this.shop.spendScore = (c) => { this.score = Math.max(0, this.score - c); this.hud.setScore(this.score); };
+    this.shop.onApply = (id) => this._applyUpgrade(id);
+    this.shop.onDeploy = () => this._closeShop();
+
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
     // Juice: shake on fire, sparks at impact points.
     this.weapons.onShoot = (type) => this.shake.add(
@@ -119,6 +126,7 @@ export class Game {
       this.shake.add(0.12);
     };
     this.enemies.onVictory = () => this._end(true);
+    this.enemies.onWaveCleared = (next) => this._openShop(next);
     this.enemies.onProjectileImpact = (pos) => {
       this.impacts.spawn(pos, 0x9fe04a, 1.4);
       this.shake.add(0.18);
@@ -172,6 +180,52 @@ export class Game {
     if (el) el.textContent = ARENAS[this.arenaIdx].name;
     const h2 = document.querySelector('#menu .panel h2');
     if (h2) h2.textContent = ARENAS[this.arenaIdx].sub;
+  }
+
+  // --- Between-wave upgrade shop ---------------------------------------
+  _openShop(nextWave) {
+    if (this.state !== 'playing') return;
+    this.state = 'shop';
+    this.enemies.holdIntermission = true;   // freeze the countdown while shopping
+    this.input.setEnabled(false);
+    this.touchControls.setEnabled(false);
+    this.hud.hideCombo();
+    this.shop.open(nextWave);
+    if (!this.touch) { try { this.controls.unlock(); } catch (e) {} }
+  }
+
+  _closeShop() {
+    if (this.state !== 'shop') return;
+    this.shop.close();
+    this.enemies.holdIntermission = false;
+    this.enemies.interT = 0;                 // begin the next wave immediately
+    this.state = 'playing';
+    this.input.setEnabled(true);
+    if (this.touch) this.touchControls.setEnabled(true);
+    this._requestLock();                     // regain mouse-look on desktop
+  }
+
+  _applyUpgrade(id) {
+    if (id === 'vitality') {
+      this.player.maxHealth += 25;
+      this.player.health = this.player.maxHealth;
+      this.hud.setHealth(this.player.health, this.player.maxHealth);
+    } else if (id === 'firepower') {
+      for (const w of this.weapons.weapons) w.damageMult *= 1.15;
+    } else if (id === 'fasthands') {
+      for (const w of this.weapons.weapons) w.reloadMult *= 0.82;
+    } else if (id === 'munitions') {
+      for (const w of this.weapons.weapons) {
+        if (isFinite(w.reserve)) {
+          w.maxReserve = Math.round(w.maxReserve * 1.3);
+          w.reserve = w.maxReserve;
+        }
+      }
+      this.weapons.switchTo(this.weapons.active); // refresh HUD ammo
+    } else if (id === 'demolition') {
+      this.grenadeMgr.maxCount += 1;
+      this.grenadeMgr.refill();
+    }
   }
 
   _wireControls() {
@@ -240,6 +294,8 @@ export class Game {
     this.damageNumbers.reset();
     this.impacts.reset(); this.shake.reset(); this._hitStop = 0;
     this.grenadeMgr.reset();
+    this.shop.reset();
+    this.player.maxHealth = 100;
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
