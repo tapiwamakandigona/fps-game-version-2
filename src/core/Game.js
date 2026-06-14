@@ -132,6 +132,8 @@ export class Game {
     this.shop.spendScore = (c) => { this.score = Math.max(0, this.score - c); this.hud.setScore(this.score); };
     this.shop.onApply = (id) => this._applyUpgrade(id);
     this.shop.onDeploy = () => this._closeShop();
+    this.shop.weaponName = () => this.weapons.current.name;
+    this.shop.weaponPaP = () => this.weapons.current.paP === true;
 
     // Curated bullet raycast targets: world solids + live enemy groups only.
     // Rebuilt per trigger pull — a few dozen entries vs. the whole scene graph.
@@ -302,6 +304,14 @@ export class Game {
     } else if (id === 'demolition') {
       this.grenadeMgr.maxCount += 1;
       this.grenadeMgr.refill();
+    } else if (id === 'packapunch') {
+      const w = this.weapons.current;
+      if (w.packAPunch()) {
+        this.hud.setWeapon(w.name);
+        this.hud.setAmmo(w.mag, w.magSize, w.reserve);
+        this.hud.message('PACK-A-PUNCH!  ' + w.name, 1400);
+        this.announcer.say('Pack a punch', { priority: 2 });
+      }
     }
   }
 
@@ -327,6 +337,18 @@ export class Game {
     const an = document.getElementById('arena-next');
     if (ap) ap.addEventListener('click', () => this.setArena(this.arenaIdx - 1));
     if (an) an.addEventListener('click', () => this.setArena(this.arenaIdx + 1));
+    const eb = document.getElementById('endless-btn');
+    if (eb) {
+      this.endlessMode = localStorage.getItem('fps-v2-endless') === '1';
+      eb.textContent = this.endlessMode ? 'ENDLESS: ON' : 'ENDLESS: OFF';
+      eb.classList.toggle('active', this.endlessMode);
+      eb.addEventListener('click', () => {
+        this.endlessMode = !this.endlessMode;
+        localStorage.setItem('fps-v2-endless', this.endlessMode ? '1' : '0');
+        eb.textContent = this.endlessMode ? 'ENDLESS: ON' : 'ENDLESS: OFF';
+        eb.classList.toggle('active', this.endlessMode);
+      });
+    }
     this._updateArenaLabel();
   }
 
@@ -387,6 +409,7 @@ export class Game {
     this.input.setEnabled(true);
     if (this.touch) this.touchControls.setEnabled(true);
     this.state = 'playing';
+    this.enemies.endless = this.endlessMode === true;
     this.enemies.start();
   }
 

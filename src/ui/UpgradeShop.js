@@ -15,15 +15,19 @@ export class UpgradeShop {
         base: 500, growth: 1.55, level: 0, max: 5 },
       { id: 'demolition', icon: '\ud83d\udca3', name: 'DEMOLITION', desc: '+1 grenade per wave',
         base: 650, growth: 1.65, level: 0, max: 4 },
+      { id: 'packapunch', icon: '✨', name: 'PACK-A-PUNCH', desc: 'Upgrade current weapon',
+        base: 2500, growth: 1, level: 0, max: 4, fixed: true },
     ];
     this.onApply = null;       // (id) => void  — Game applies the effect
     this.onDeploy = null;      // () => void    — close shop, start next wave
     this.getScore = () => 0;   // () => number
     this.spendScore = () => {};// (cost) => void
+    this.weaponName = () => 'WEAPON';   // current weapon name
+    this.weaponPaP = () => false;       // is current weapon already Pack-a-Punch'd?
     this._build();
   }
 
-  cost(u) { return Math.round(u.base * Math.pow(u.growth, u.level)); }
+  cost(u) { return u.fixed ? u.base : Math.round(u.base * Math.pow(u.growth, u.level)); }
 
   _build() {
     const root = document.createElement('div');
@@ -64,6 +68,8 @@ export class UpgradeShop {
 
   _buy(u) {
     if (u.level >= u.max) return;
+    // Pack-a-Punch is per-weapon: block if the equipped weapon is already upgraded.
+    if (u.id === 'packapunch' && this.weaponPaP()) return;
     const c = this.cost(u);
     if (this.getScore() < c) return;
     this.spendScore(c);
@@ -78,8 +84,20 @@ export class UpgradeShop {
     this.scoreEl.textContent = score;
     for (const u of this.upgrades) {
       const card = this.cards[u.id];
-      const maxed = u.level >= u.max;
       const c = this.cost(u);
+      if (u.id === 'packapunch') {
+        // Dynamic per-weapon card: reflects the currently equipped weapon.
+        const done = this.weaponPaP();
+        card.querySelector('.shop-desc').textContent = `Upgrade ${this.weaponName()}: +60% dmg, +50% mag`;
+        card.querySelector('.shop-lv').textContent = u.level > 0 ? `\u00d7${u.level}` : '';
+        card.querySelector('.shop-cost').textContent = done ? 'DONE' : c;
+        const afford = !done && score >= c;
+        card.classList.toggle('maxed', done);
+        card.classList.toggle('afford', afford);
+        card.classList.toggle('locked', !done && !afford);
+        continue;
+      }
+      const maxed = u.level >= u.max;
       card.querySelector('.shop-lv').textContent = u.level > 0 ? `Lv ${u.level}` : '';
       card.querySelector('.shop-cost').textContent = maxed ? 'MAX' : c;
       const afford = !maxed && score >= c;

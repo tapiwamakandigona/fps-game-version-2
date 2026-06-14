@@ -139,6 +139,7 @@ body.is-touch #score { font-size: 20px; }
   border: 1px solid rgba(127,178,255,0.4); box-shadow: none; margin-top: 14px;
   font-size: 16px; padding: 11px 30px; }
 .btn-secondary:hover { background: rgba(40,54,78,0.8); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.btn-secondary.active { background: rgba(70,120,70,0.85); color: #d6ffd0; box-shadow: 0 0 18px rgba(80,200,90,0.5); }
 
 .settings-panel { min-width: 360px; max-width: 92vw; }
 .settings-panel h2 { color: #7fb2ff; margin-bottom: 8px; }
