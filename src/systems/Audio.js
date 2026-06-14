@@ -120,6 +120,22 @@ export class Audio {
     this._env(lp, t, 0.18, 0.5); nz.start(t); nz.stop(t + 0.2);
   }
 
+  // Soft footstep: a short low-passed noise scuff + a faint low thud. Kept quiet so a
+  // run of steps sits under the action. `intensity` (0..1) lifts sprint footfalls.
+  footstep(intensity = 0.5) {
+    if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const vol = 0.10 + 0.10 * intensity;
+    // scuff: filtered noise burst
+    const nz = this._noise(0.09); const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1500 + 600 * intensity; nz.connect(lp);
+    this._env(lp, t, 0.07, vol); nz.start(t); nz.stop(t + 0.09);
+    // thud: brief low sine drop
+    const osc = this.ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, t); osc.frequency.exponentialRampToValueAtTime(60, t + 0.07);
+    this._env(osc, t, 0.07, vol * 0.7); osc.start(t); osc.stop(t + 0.08);
+  }
+
   pickup() { this._tones([660, 880], 0.07); }
   wave() { this._tones([330, 440, 550], 0.12); }
   victory() { this._tones([523, 659, 784, 1047], 0.16); }

@@ -37,6 +37,8 @@ export class Player {
     this._exhausted = false;
     this._bobPhase = 0;
     this._bobAmp = 0;
+    this._stepPhase = 0;       // last bob phase a footstep fired at
+    this.onFootstep = null;    // (intensity) => void — set by Game to play audio
     this._landDip = 0;
     this.onLand = null;       // callback(strength 0..1)
     // crouch / slide state
@@ -130,7 +132,17 @@ export class Player {
     const lowStance = this.crouching || this.sliding;
     const targetAmp = (moving && this.onGround && !lowStance) ? (this.sprinting ? 0.085 : 0.05) : 0;
     this._bobAmp += (targetAmp - this._bobAmp) * Math.min(1, dt * 8);
-    if (moving && this.onGround && !lowStance) this._bobPhase += dt * (this.sprinting ? 13 : 9);
+    if (moving && this.onGround && !lowStance) {
+      this._bobPhase += dt * (this.sprinting ? 13 : 9);
+      // One footstep per half-cycle (each foot plant). Fire as the phase crosses a
+      // multiple of PI so cadence matches the view bob and quickens when sprinting.
+      if (Math.floor(this._bobPhase / Math.PI) > Math.floor(this._stepPhase / Math.PI)) {
+        if (this.onFootstep) this.onFootstep(this.sprinting ? 0.85 : 0.45);
+      }
+      this._stepPhase = this._bobPhase;
+    } else {
+      this._stepPhase = this._bobPhase; // keep in sync so no stale step fires on resume
+    }
     const bobY = Math.sin(this._bobPhase) * this._bobAmp;
     this._landDip *= Math.max(0, 1 - dt * 7);
     // Smoothly drop the view for crouch/slide (separate from jump/gravity physics).
