@@ -33,6 +33,11 @@ export class SettingsPanel {
           <span class="set-val" id="set-sens-v"></span>
         </div>
         <div class="set-row">
+          <label>Field of view</label>
+          <input type="range" id="set-fov" min="70" max="110" step="1">
+          <span class="set-val" id="set-fov-v"></span>
+        </div>
+        <div class="set-row">
           <label>Volume</label>
           <input type="range" id="set-volume" min="0" max="1" step="0.05">
           <span class="set-val" id="set-volume-v"></span>
@@ -49,10 +54,12 @@ export class SettingsPanel {
     const bright = this.el.querySelector('#set-brightness');
     const sens = this.el.querySelector('#set-sens');
     const vol = this.el.querySelector('#set-volume');
+    const fov = this.el.querySelector('#set-fov');
 
     bright.addEventListener('input', () => { s.set('brightness', +bright.value); this._refreshLabels(); });
     sens.addEventListener('input', () => { s.set('sensitivity', +sens.value); this._refreshLabels(); });
     vol.addEventListener('input', () => { s.set('volume', +vol.value); this._refreshLabels(); });
+    fov.addEventListener('input', () => { s.set('fov', +fov.value); this._refreshLabels(); });
 
     this.el.querySelectorAll('#set-quality button').forEach((b) => {
       b.addEventListener('click', () => { s.set('quality', b.dataset.q); this._refreshQuality(); });
@@ -65,6 +72,7 @@ export class SettingsPanel {
     this.el.querySelector('#set-brightness-v').textContent = s.brightness.toFixed(2);
     this.el.querySelector('#set-sens-v').textContent = s.sensitivity.toFixed(2) + '×';
     this.el.querySelector('#set-volume-v').textContent = Math.round(s.volume * 100) + '%';
+    this.el.querySelector('#set-fov-v').textContent = Math.round(s.fov) + '\u00b0';
   }
 
   _refreshQuality() {
@@ -78,6 +86,7 @@ export class SettingsPanel {
     this.el.querySelector('#set-brightness').value = s.brightness;
     this.el.querySelector('#set-sens').value = s.sensitivity;
     this.el.querySelector('#set-volume').value = s.volume;
+    this.el.querySelector('#set-fov').value = s.fov;
     this._refreshLabels();
     this._refreshQuality();
   }

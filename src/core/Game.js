@@ -95,6 +95,7 @@ export class Game {
   _buildWorld() {
     this.arenaIdx = Math.min(ARENAS.length - 1, Math.max(0, Number(localStorage.getItem(ARENA_KEY) || 0)));
     this.world = new ARENAS[this.arenaIdx].cls(this.engine.scene);
+    this._freezeStaticWorld();
     this.player = new Player(this.engine.camera, this.world.colliders);
     this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
@@ -248,11 +249,23 @@ export class Game {
     this.arenaIdx = idx;
     localStorage.setItem(ARENA_KEY, String(idx));
     this.world = new ARENAS[idx].cls(this.engine.scene);
+    this._freezeStaticWorld();
     this.player.colliders = this.world.colliders;
     this.enemies.warehouse = this.world;
     this.enemies.colliders = this.world.colliders;
     this.engine.camera.position.copy(this.world.playerSpawn);
     this._updateArenaLabel();
+  }
+
+  // Perf: the arena geometry never moves, so stop Three.js from recomputing its
+  // world matrices every frame. Only light intensities animate (no transforms),
+  // so freezing static mesh matrices is safe and saves CPU on hundreds of meshes.
+  _freezeStaticWorld() {
+    if (!this.world || !this.world.root) return;
+    this.world.root.updateMatrixWorld(true);
+    this.world.root.traverse((o) => {
+      if (o.isMesh || o.isInstancedMesh) { o.matrixAutoUpdate = false; o.updateMatrix(); }
+    });
   }
 
   _updateArenaLabel() {
