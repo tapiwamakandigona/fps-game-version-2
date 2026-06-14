@@ -34,6 +34,7 @@ export class EnemyManager {
     this.onEnemyExplode = null;     // (pos) => void  exploder FX
     this.boss = null;
     this.spits = [];
+    this.endless = false;      // when true, waves never end — survive as long as you can
   }
 
   start() { this._beginWave(1); }
@@ -55,10 +56,11 @@ export class EnemyManager {
     this.spawnT = 0;
     this.state = 'spawning';
     if (this.onWaveStart) this.onWaveStart(w);
-    if (w === TOTAL_WAVES) this._spawnBoss();
+    // Boss on the final campaign wave, and every 5th wave in endless mode.
+    if (w === TOTAL_WAVES || (this.endless && w % TOTAL_WAVES === 0)) this._spawnBoss(w);
   }
 
-  _spawnBoss() {
+  _spawnBoss(w = TOTAL_WAVES) {
     const spawns = this.warehouse.enemySpawns;
     const p = this.player.camera.position;
     let best = spawns[0], bestD = -1;
@@ -66,8 +68,11 @@ export class EnemyManager {
       const d = (c.x - p.x) ** 2 + (c.z - p.z) ** 2;
       if (d > bestD) { bestD = d; best = c; }
     }
+    // Endless bosses get tougher each cycle.
+    const cycle = Math.max(1, Math.floor(w / TOTAL_WAVES));
     const boss = new Zombie(this.scene, this.player, this.colliders, {
-      variant: 'boss', scale: 2.2, health: 2600, speed: 1.7, damage: 22, score: 1500,
+      variant: 'boss', scale: 2.2, health: Math.round(2600 * (1 + (cycle - 1) * 0.6)),
+      speed: 1.7 + (cycle - 1) * 0.15, damage: 22 + (cycle - 1) * 6, score: 1500 * cycle,
     });
     boss.name = BOSS_NAME;
     boss.spawn({ x: best.x, z: best.z });
@@ -223,7 +228,7 @@ export class EnemyManager {
 
     // wave cleared?
     if (this.state === 'spawning' && this.toSpawn === 0 && this.zombies.length === 0) {
-      if (this.wave >= TOTAL_WAVES) {
+      if (this.wave >= TOTAL_WAVES && !this.endless) {
         this.state = 'done';
         if (this.onVictory) this.onVictory();
       } else {

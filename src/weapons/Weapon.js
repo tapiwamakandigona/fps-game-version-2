@@ -16,6 +16,7 @@ export class Weapon {
     this.maxReserve = cfg.maxReserve ?? this.reserve;
     this.damageMult = 1;   // raised by the FIREPOWER upgrade
     this.reloadMult = 1;   // lowered by the FAST HANDS upgrade
+    this.paP = false;      // Pack-a-Punch'd?
     this.cooldown = 0; this.reloadT = 0; this.reloading = false;
     this.recoil = 0;
     this.raycaster = new THREE.Raycaster();
@@ -131,6 +132,32 @@ export class Weapon {
     }
     this._emitAmmo();
     if (this.mag === 0) this.reload();
+  }
+
+  // Pack-a-Punch: permanently upgrade this weapon once. +60% damage, +50% mag &
+  // reserve, full top-up, and a gold viewmodel glow. Returns false if already done.
+  packAPunch() {
+    if (this.paP) return false;
+    this.paP = true;
+    this.damageMult *= 1.6;
+    this.magSize = Math.round(this.magSize * 1.5);
+    this.mag = this.magSize;
+    if (isFinite(this.reserve)) {
+      this.maxReserve = Math.round(this.maxReserve * 1.5);
+      this.reserve = this.maxReserve;
+    }
+    this.name = this.name + ' \u2728';
+    const gold = new THREE.Color(0xffd700);
+    this.group.traverse((o) => {
+      if (o.isMesh && o.material && o.material.emissive) {
+        o.material = o.material.clone();
+        o.material.emissive.setHex(0xffaa00);
+        o.material.emissiveIntensity = 0.45;
+        if (o.material.color) o.material.color.lerp(gold, 0.35);
+      }
+    });
+    this._emitAmmo();
+    return true;
   }
 
   _emitAmmo() { if (this.onAmmoChange) this.onAmmoChange(this.mag, this.magSize, this.reserve); }
