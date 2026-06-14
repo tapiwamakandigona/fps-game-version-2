@@ -1,7 +1,7 @@
 // Persistent player settings: brightness, quality, look sensitivity, volume.
 const KEY = 'fps-v2-settings';
 export const BASE_LOOK_SENS = 0.0040;
-const DEFAULTS = { brightness: 1.35, quality: 'high', sensitivity: 1.0, volume: 0.5 };
+const DEFAULTS = { brightness: 1.35, quality: 'high', sensitivity: 1.0, volume: 0.5, fov: 90 };
 
 export class Settings {
   constructor(game) {
@@ -21,6 +21,7 @@ export class Settings {
     this.game.audio.setVolume(v.volume);
     if (this.game.music) { this.game.music.setVolume(v.volume * 0.45); this.game.music.setEnabled(v.volume > 0.001); }
     if (this.game.controls) this.game.controls.pointerSpeed = v.sensitivity;
+    if (this.game._baseFov !== undefined) this.game._baseFov = v.fov; // ADS loop applies it live
     if (this.game.touchControls) this.game.touchControls.lookSens = BASE_LOOK_SENS * v.sensitivity;
   }
 
