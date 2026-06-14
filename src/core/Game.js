@@ -30,6 +30,7 @@ import { Announcer } from '../systems/Announcer.js';
 import { KillFeed } from '../ui/KillFeed.js';
 import { DirectionalDamage } from '../ui/DirectionalDamage.js';
 import { Killstreaks } from '../systems/Killstreaks.js';
+import { Music } from '../systems/Music.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -374,8 +375,18 @@ export class Game {
       '<span><b>SWAP</b> weapon</span>';
   }
 
+  _ensureMusic() {
+    if (this.music) return;
+    this.audio.resume(); // creates the shared AudioContext
+    try {
+      this.music = new Music({ audioCtx: this.audio.ctx, volume: (this.settings.get('volume') || 0) * 0.45 });
+      this.music.setEnabled((this.settings.get('volume') || 0) > 0.001);
+    } catch (e) { this.music = null; }
+  }
+
   _requestLock() {
     this.audio.resume();
+    this._ensureMusic();
     // Touch devices have no pointer lock — start/resume directly.
     if (this.touch) {
       if (this.state === 'menu' || this.state === 'over') this._startRun();
@@ -410,6 +421,8 @@ export class Game {
     if (this.touch) this.touchControls.setEnabled(true);
     this.state = 'playing';
     this.enemies.endless = this.endlessMode === true;
+    this.hud.setEndless(this.enemies.endless);
+    if (this.music) { try { this.music.start(); } catch (e) {} }
     this.enemies.start();
   }
 
@@ -480,6 +493,7 @@ export class Game {
   _updateAdsRecoil(dt) {
     const playing = this.state === 'playing';
     const wantAds = playing && this.input.ads && this.player && this.player.alive && !this.player.sprinting;
+    if (wantAds !== this._adsPrev) { this.hud.setAds(wantAds); this._adsPrev = wantAds; }
     this.weapons.adsActive = wantAds;
     this._adsT += ((wantAds ? 1 : 0) - this._adsT) * Math.min(1, dt * 14);
     if (this._adsT < 0.0005) this._adsT = 0;
@@ -561,6 +575,14 @@ export class Game {
       this.grenadeMgr.update(dt);
       this.killstreaks.update(dt);
       this.dirDmg.update(dt);
+      // Adaptive soundtrack: blend toward full combat with on-screen threat.
+      if (this.music) {
+        let threat = Math.min(1, this.enemies.zombies.length / 9);
+        if (this.enemies.boss && this.enemies.boss.alive) threat = Math.max(threat, 0.9);
+        const waveBoost = Math.min(0.2, this.enemies.wave * 0.025);
+        const lowHp = (this.player.health / this.player.maxHealth) < 0.25 ? 0.15 : 0;
+        this.music.setIntensity(Math.min(1, 0.18 + threat * 0.72 + waveBoost + lowHp));
+      }
       if (this.combo > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
@@ -588,6 +610,9 @@ export class Game {
         }
       }
     }
+
+    // Outside combat (menu/pause/over), let the soundtrack settle to a calm drone.
+    if (this.music && this.state !== 'playing') this.music.setIntensity(0.0);
 
     // ADS zoom + recoil compose on top of look input (runs every frame so the
     // view eases back to base FOV when not aiming / not playing).

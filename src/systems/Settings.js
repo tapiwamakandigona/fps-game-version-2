@@ -19,6 +19,7 @@ export class Settings {
     this.game.engine.setQuality(v.quality);
     if (this.game.adaptive) this.game.adaptive.setCeiling(v.quality);
     this.game.audio.setVolume(v.volume);
+    if (this.game.music) { this.game.music.setVolume(v.volume * 0.45); this.game.music.setEnabled(v.volume > 0.001); }
     if (this.game.controls) this.game.controls.pointerSpeed = v.sensitivity;
     if (this.game.touchControls) this.game.touchControls.lookSens = BASE_LOOK_SENS * v.sensitivity;
   }

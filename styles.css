@@ -10,7 +10,9 @@ body { font-family: "Rajdhani", "Segoe UI", system-ui, sans-serif; color: #e8edf
 /* ---------- HUD ---------- */
 #hud { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 
-#crosshair { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%);
+  transition: opacity 0.12s ease, transform 0.12s ease; }
+#crosshair.ads { opacity: 0.25; transform: translate(-50%, -50%) scale(0.55); }
 .ch { position: absolute; background: rgba(255,255,255,0.85); box-shadow: 0 0 3px rgba(0,0,0,0.8); }
 .ch-t, .ch-b { left: 50%; width: 2px; height: 7px; transform: translateX(-50%); }
 .ch-l, .ch-r { top: 50%; height: 2px; width: 7px; transform: translateY(-50%); }

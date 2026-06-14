@@ -28,6 +28,8 @@ export class HUD {
 
   setScore(n) { this.scoreVal.textContent = n; }
   setWave(n) { this.waveVal.textContent = n; }
+  setEndless(on) { const t = $('wave-total'); if (t) t.textContent = on ? ' \u221e' : ' / 5'; }
+  setAds(on) { const c = $('crosshair'); if (c) c.classList.toggle('ads', !!on); }
 
   setHealth(h, max) {
     const pct = Math.max(0, Math.min(100, (h / max) * 100));
