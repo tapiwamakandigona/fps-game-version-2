@@ -192,6 +192,9 @@ export class Game {
       this.score += award; this.hud.setScore(this.score);
       if (this.combo >= 2) this.hud.setCombo(this.combo, mult);
       this.pickups.maybeDrop(z.group.position, z.variant);
+      // Kill-confirm: distinct elimination hitmarker + crisp ding (COD feel).
+      this.hud.hitmark(this._lastHeadshot, true);
+      this.audio.killConfirm(this._lastHeadshot);
       // hit-stop punch on kills (a touch longer on brutes)
       this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
       this.shake.add(0.12);

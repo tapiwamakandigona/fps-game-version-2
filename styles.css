@@ -47,9 +47,13 @@ body { font-family: "Rajdhani", "Segoe UI", system-ui, sans-serif; color: #e8edf
   opacity: 0; }
 #hitmarker.show { opacity: 1; animation: hm 0.18s ease-out; }
 #hitmarker::before, #hitmarker::after { content: ""; position: absolute; background: var(--c, #ff5b5b); }
-#hitmarker::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
-#hitmarker::after { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+#hitmarker::before { left: 50%; top: 0; width: var(--w, 2px); height: 100%; transform: translateX(-50%); }
+#hitmarker::after { top: 50%; left: 0; height: var(--w, 2px); width: 100%; transform: translateY(-50%); }
 @keyframes hm { from { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1.4);} to { opacity: 0; } }
+/* Kill-confirm: thicker, bigger, snappier pop (COD-style elimination marker) */
+#hitmarker.kill.show { animation: hmk 0.32s cubic-bezier(.2,.9,.3,1); filter: drop-shadow(0 0 5px var(--c)); }
+@keyframes hmk { 0% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(2.0);}
+  55% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1.15);} 100% { opacity: 0; } }
 
 #damage-vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0;
   box-shadow: inset 0 0 160px 60px rgba(200,0,0,0.7); transition: opacity 0.12s; }
