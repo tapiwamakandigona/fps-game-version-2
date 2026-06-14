@@ -26,6 +26,10 @@ import { Impacts } from '../ui/Impacts.js';
 import { ScreenShake } from '../systems/ScreenShake.js';
 import { UpgradeShop } from '../ui/UpgradeShop.js';
 import { PerfMeter, AdaptiveQuality } from '../systems/Perf.js';
+import { Announcer } from '../systems/Announcer.js';
+import { KillFeed } from '../ui/KillFeed.js';
+import { DirectionalDamage } from '../ui/DirectionalDamage.js';
+import { Killstreaks } from '../systems/Killstreaks.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -53,6 +57,12 @@ export class Game {
     this.score = 0;
     this.best = Number(localStorage.getItem(HS_KEY) || 0);
     this.clock = new THREE.Clock();
+
+    // COD feedback systems (created before _buildWorld so Killstreaks can use them).
+    const hudEl = document.getElementById('hud');
+    this.announcer = new Announcer();
+    this.killFeed = new KillFeed(hudEl);
+    this.dirDmg = new DirectionalDamage(hudEl, this.engine.camera);
 
     this._buildWorld();
     this._wireControls();
@@ -102,6 +112,20 @@ export class Game {
       this.audio.explosion();
     };
     this.combo = 0; this.comboTimer = 0;
+    this._mkCount = 0; this._mkTimer = 0;   // rapid multi-kill window (announcer)
+    this._lastHeadshot = false;             // most recent hit was a headshot
+    this._lowAnnounced = false;             // low-health voice line fired once
+
+    // Killstreak system (UAV / Sentry / Mortar / Self-Revive).
+    this.killstreaks = new Killstreaks({
+      scene: this.engine.scene,
+      camera: this.engine.camera,
+      getZombies: () => this.enemies.zombies,
+      audio: this.audio,
+      announcer: this.announcer,
+      hud: this.hud,
+      onMortarExplosion: (pos) => this._explodeAt(pos, 6, 170),
+    });
 
     this.shop = new UpgradeShop();
     this.shop.getScore = () => this.score;
@@ -118,7 +142,14 @@ export class Game {
       return t;
     };
 
-    this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
+    this.player.onHurt = () => {
+      this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
+      // Directional damage indicator: point toward the nearest live threat.
+      const atk = this._nearestZombiePos();
+      if (atk) this.dirDmg.hit(atk, this.engine.camera.position);
+      // Taking damage breaks the killstreak.
+      if (this.killstreaks) this.killstreaks.reset();
+    };
     this.player.onSlide = () => { this.shake.add(0.18); };
     // Juice: shake on fire, sparks at impact points.
     this.weapons.onShoot = (type) => this.shake.add(
@@ -135,11 +166,12 @@ export class Game {
       this.impacts.spawn(point, color, headshot ? 1.5 : (isZomb ? 1.1 : 0.9));
     };
     this.weapons.onHit = (z, headshot, point, dmg) => {
+      this._lastHeadshot = headshot;
       this.hud.hitmark(headshot);
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
-    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); this.grenadeMgr.refill(); };
+    this.enemies.onWaveStart = (w) => { this.hud.setWave(w); this.hud.message(`WAVE ${w}`, 1500); this.audio.wave(); this.grenadeMgr.refill(); this.announcer.wave(w); };
     this.enemies.onIntermission = (next, secs) => this.hud.message(`WAVE CLEARED — next in ${secs}`, 1100);
     this.enemies.onKill = (z, sc) => {
       // combo: each kill within the window raises the points multiplier (caps at 3x)
@@ -152,6 +184,22 @@ export class Game {
       // hit-stop punch on kills (a touch longer on brutes)
       this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
       this.shake.add(0.12);
+
+      // Kill feed + killstreak + rapid multi-kill announcer.
+      const explosive = z.variant === 'exploder';
+      this.killFeed.kill({
+        weapon: this.weapons.current.name,
+        variant: z.variant || 'normal',
+        points: award,
+        headshot: this._lastHeadshot,
+        explosive,
+        streak: false,
+      });
+      this._lastHeadshot = false;
+      this.killstreaks.addKill();
+      this._mkCount = this._mkTimer > 0 ? this._mkCount + 1 : 1;
+      this._mkTimer = 1.2;
+      if (this._mkCount >= 2) this.announcer.multiKill(this._mkCount);
     };
     this.enemies.onVictory = () => this._end(true);
     this.enemies.onWaveCleared = (next) => this._openShop(next);
@@ -171,6 +219,7 @@ export class Game {
       this.hud.message('\u26a0  ' + (b.name || 'BOSS') + ' INCOMING', 2000);
       this.audio.wave();
       this.shake.add(0.6);
+      this.announcer.bossIncoming();
     };
     this.enemies.onBossDeath = () => {
       this.hud.hideBoss();
@@ -325,6 +374,10 @@ export class Game {
     this.shop.reset();
     this.player.maxHealth = 100;
     this.combo = 0; this.comboTimer = 0; this.hud.hideCombo();
+    this._mkCount = 0; this._mkTimer = 0; this._lowAnnounced = false;
+    this.killstreaks.dispose(); this.killstreaks.reset();
+    this.killFeed.clear(); this.dirDmg.clear();
+    this.announcer.cancelAll();
     this.hud.hideBoss();
     this.player.spawn(this.world.playerSpawn);
     this.weapons.reset();
@@ -358,6 +411,10 @@ export class Game {
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; localStorage.setItem(HS_KEY, String(this.best)); }
     if (victory) this.audio.victory(); else this.audio.gameover();
+    if (victory) this.announcer.victory(); else this.announcer.defeat();
+    this.killFeed.clear();
+    this.dirDmg.clear();
+    this.killstreaks.dispose();
     this.hud.showHud(false);
     this.minimap.setVisible(false);
     this.hud.showEnd({ victory, score: this.score, best: this.best, newBest });
@@ -431,6 +488,34 @@ export class Game {
     this._recoilTarget.y += (0 - this._recoilTarget.y) * rec;
   }
 
+  // World position of the nearest live zombie (for the directional damage arc).
+  _nearestZombiePos() {
+    let best = null, bd = Infinity;
+    const p = this.engine.camera.position;
+    for (const z of this.enemies.zombies) {
+      if (!z.alive) continue;
+      const d = z.group.position.distanceToSquared(p);
+      if (d < bd) { bd = d; best = z; }
+    }
+    return best ? best.group.position : null;
+  }
+
+  // Radial AoE explosion (used by the Mortar killstreak): damage + FX, like a grenade.
+  _explodeAt(pos, radius = 6, baseDmg = 170) {
+    for (const z of this.enemies.zombies) {
+      if (!z.alive) continue;
+      const d = z.group.position.distanceTo(pos);
+      if (d <= radius) {
+        const f = 1 - d / radius;
+        z.takeDamage(Math.max(40, Math.round(baseDmg * f * f + 30)), false);
+      }
+    }
+    this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xffa030, 5);
+    this.shake.add(0.6);
+    this._hitStop = Math.max(this._hitStop, 0.04);
+    this.audio.explosion();
+  }
+
   _loop() {
     requestAnimationFrame(this._loop);
     this.perf.begin();
@@ -451,15 +536,34 @@ export class Game {
       this.damageNumbers.update(dt);
       this.impacts.update(dt);
       this.grenadeMgr.update(dt);
+      this.killstreaks.update(dt);
+      this.dirDmg.update(dt);
       if (this.combo > 0) {
         this.comboTimer -= dt;
         if (this.comboTimer <= 0) { this.combo = 0; this.hud.hideCombo(); }
       }
+      if (this._mkTimer > 0) { this._mkTimer -= dt; if (this._mkTimer <= 0) this._mkCount = 0; }
+      // low-health voice + heartbeat vignette
+      const hpFrac = this.player.health / this.player.maxHealth;
+      this.dirDmg.setLowHealth(hpFrac < 0.25 && this.player.alive);
+      if (hpFrac < 0.25 && !this._lowAnnounced) { this.announcer.lowHealth(); this._lowAnnounced = true; }
+      else if (hpFrac > 0.4) this._lowAnnounced = false;
       if (this.enemies.boss && this.enemies.boss.alive) this.hud.setBoss(this.enemies.boss.health / this.enemies.boss.maxHealth);
       this.hud.setHealth(this.player.health, this.player.maxHealth);
       this.hud.setStamina(this.player.stamina, this.player._exhausted);
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);
-      if (!this.player.alive) this._end(false);
+      if (!this.player.alive) {
+        // Self-Revive killstreak: spend it to get back up instead of dying.
+        if (this.killstreaks.consumeRevive()) {
+          this.player.alive = true;
+          this.player.health = this.player.maxHealth * 0.5;
+          this.player._regenT = 0;
+          this.hud.message('SELF-REVIVE', 1600);
+          this.announcer.say('Self revive', { priority: 2 });
+        } else {
+          this._end(false);
+        }
+      }
     }
 
     // ADS zoom + recoil compose on top of look input (runs every frame so the
