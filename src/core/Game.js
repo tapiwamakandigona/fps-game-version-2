@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { LookControls } from '../systems/LookControls.js';
+
+// Build stamp — bump on each deploy so testers can confirm they're on the latest
+// (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
+export const BUILD = 'v10 · 2026-06-14';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -355,7 +359,43 @@ export class Game {
   }
 
   _wireButtons() {
-    document.getElementById('start-btn').addEventListener('click', () => this._requestLock());
+    // Build-version stamp so testers can confirm they're running the latest deploy.
+    const bt = document.getElementById('build-tag');
+    if (bt) bt.textContent = 'build ' + BUILD;
+
+    // Fullscreen toggle (menu button + in-game corner button). Must be invoked from
+    // a user gesture, which a click/tap satisfies. Prefixed fallbacks for older WebKit.
+    const toggleFullscreen = () => {
+      try {
+        const el = document.documentElement;
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!fsEl) {
+          const req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+          if (req) { const r = req.call(el); if (r && r.catch) r.catch(() => {}); }
+        } else {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) exit.call(document);
+        }
+      } catch (e) { /* fullscreen unsupported (e.g. iOS Safari) — ignore */ }
+    };
+    const fsBtn = document.getElementById('fullscreen-btn');
+    const fsTog = document.getElementById('fs-toggle');
+    if (fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
+    if (fsTog) fsTog.addEventListener('click', toggleFullscreen);
+    // On touch, starting a run also enters fullscreen (the tap is a valid gesture).
+    // Enter-only — never exits if the player is already fullscreen.
+    this._maybeFsOnStart = () => {
+      if (!this.touch) return;
+      try {
+        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fsEl) return;
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+        if (req) { const r = req.call(el); if (r && r.catch) r.catch(() => {}); }
+      } catch (e) { /* ignore */ }
+    };
+
+    document.getElementById('start-btn').addEventListener('click', () => { this._maybeFsOnStart(); this._requestLock(); });
     document.getElementById('resume-btn').addEventListener('click', () => this._requestLock());
     document.getElementById('restart-btn').addEventListener('click', () => { this.hud.hideEnd(); this._requestLock(); });
     const sm = document.getElementById('settings-btn');
