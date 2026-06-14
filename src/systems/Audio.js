@@ -99,6 +99,19 @@ export class Audio {
     this._env(o, t, 0.07, headshot ? 0.4 : 0.25); o.start(t); o.stop(t + 0.09);
   }
 
+  // Crisp two-tone elimination confirm — a satisfying "ding" on a kill.
+  killConfirm(headshot = false) {
+    if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const base = headshot ? 1000 : 760;
+    [[0, base], [0.05, base * 1.5]].forEach(([off, f]) => {
+      const o = this.ctx.createOscillator(); o.type = 'square';
+      o.frequency.setValueAtTime(f, t + off);
+      o.frequency.exponentialRampToValueAtTime(f * 1.18, t + off + 0.04);
+      this._env(o, t + off, 0.06, 0.16); o.start(t + off); o.stop(t + off + 0.08);
+    });
+  }
+
   hurt() {
     if (!this.enabled) return; this._ensure(); if (!this.ctx) return;
     const t = this.ctx.currentTime;

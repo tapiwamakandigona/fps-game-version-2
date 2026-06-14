@@ -90,11 +90,16 @@ export class HUD {
   }
   clearMessage() { this.centerMsg.classList.remove('show'); }
 
-  hitmark(headshot = false) {
-    this.hitmarker.style.setProperty('--c', headshot ? '#ffd34d' : '#ff5b5b');
-    this.hitmarker.classList.remove('show');
+  hitmark(headshot = false, kill = false) {
+    // Kill-confirm marker: bright/white, thicker bars, bigger pop. Otherwise the
+    // usual gold (headshot) / red (body) tick.
+    const color = kill ? (headshot ? '#ffe24d' : '#ffffff') : (headshot ? '#ffd34d' : '#ff5b5b');
+    this.hitmarker.style.setProperty('--c', color);
+    this.hitmarker.style.setProperty('--w', kill ? '4px' : '2px');
+    this.hitmarker.classList.remove('show', 'kill');
     void this.hitmarker.offsetWidth; // restart animation
     this.hitmarker.classList.add('show');
+    if (kill) this.hitmarker.classList.add('kill');
   }
 
   flashDamage() {
