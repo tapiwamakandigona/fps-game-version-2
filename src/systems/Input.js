@@ -12,6 +12,7 @@ export class Input {
     this.onSwitch = null;     // callback(index)
     this.onSwitchNext = null; // callback()
     this.onGrenade = null;    // callback() — throw a grenade (G)
+    this.onTactical = null;   // callback() — throw a flashbang (F)
 
     // touch / analog state
     this.axisX = 0;        // -1..1 strafe (from virtual stick)
@@ -34,6 +35,7 @@ export class Input {
       if (code === 'Digit3' && this.onSwitch) this.onSwitch(2);
       if (code === 'Digit4' && this.onSwitch) this.onSwitch(3);
       if (code === 'KeyG' && this.onGrenade) this.onGrenade();
+      if (code === 'KeyF' && this.onTactical) this.onTactical();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
 

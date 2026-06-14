@@ -23,6 +23,7 @@ export class Zombie {
     this.alive = true;
     this.dead = false;          // fully finished (ready to remove)
     this.attackCd = 0;
+    this.stun = 0;             // flashbang daze: seconds frozen (no move/attack)
     this.lunge = 0;             // brief forward bite-lean on melee (0..0.4)
     this.flash = 0;
     this.deathT = 0;
@@ -133,19 +134,26 @@ export class Zombie {
     // Spitters hang back and lob; everyone else closes to melee. Exploders rush
     // in and detonate on contact.
     const stopDist = this.variant === 'spitter' ? 7.5 : attackRange;
-    if (dist > stopDist) {
-      g.x += this._dir.x * this.speed * dt;
-      g.z += this._dir.z * this.speed * dt;
-      this._resolve(g);
-    } else if (this.player.alive) {
-      if (this.variant === 'spitter') {
-        this.attackCd -= dt;
-        if (this.attackCd <= 0) { this.attackCd = 2.2; if (this.onSpit) this.onSpit(); }
-      } else if (this.variant === 'exploder') {
-        this._detonate();
-      } else {
-        this.attackCd -= dt;
-        if (this.attackCd <= 0) { this.attackCd = 1.0; this.player.takeDamage(this.damage); this.lunge = 0.4; }
+    if (this.stun > 0) {
+      // Flashbanged: frozen and dazed — no movement or attacks, just a stagger wobble.
+      this.stun -= dt;
+      this.group.rotation.z = Math.sin(t * 22) * 0.09;
+    } else {
+      this.group.rotation.z = 0;
+      if (dist > stopDist) {
+        g.x += this._dir.x * this.speed * dt;
+        g.z += this._dir.z * this.speed * dt;
+        this._resolve(g);
+      } else if (this.player.alive) {
+        if (this.variant === 'spitter') {
+          this.attackCd -= dt;
+          if (this.attackCd <= 0) { this.attackCd = 2.2; if (this.onSpit) this.onSpit(); }
+        } else if (this.variant === 'exploder') {
+          this._detonate();
+        } else {
+          this.attackCd -= dt;
+          if (this.attackCd <= 0) { this.attackCd = 1.0; this.player.takeDamage(this.damage); this.lunge = 0.4; }
+        }
       }
     }
 

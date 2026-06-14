@@ -102,6 +102,33 @@ export class HUD {
     setTimeout(() => { this.vignette.style.opacity = '0'; }, 110);
   }
 
+  setTacticals(n) {
+    if (!this._flash) this._flash = document.getElementById('flash-count');
+    if (this._flash) this._flash.textContent = n;
+  }
+
+  // Whites out the screen, then fades over a duration scaled by blind strength (0..1).
+  flashbang(strength = 1) {
+    const ov = this._flashOv || (this._flashOv = document.getElementById('flash-overlay'));
+    if (!ov) return;
+    const s = Math.max(0, Math.min(1, strength));
+    if (s <= 0.02) return;
+    if (this._flashRAF) cancelAnimationFrame(this._flashRAF);
+    const dur = 500 + s * 2200;   // ms — stronger flash blinds longer
+    const start = performance.now();
+    const peak = 0.35 + 0.65 * s;
+    const step = (now) => {
+      const k = (now - start) / dur;
+      if (k >= 1) { ov.style.opacity = '0'; this._flashRAF = null; return; }
+      // brief full-white hold, then ease out
+      const o = k < 0.12 ? peak : peak * Math.pow(1 - (k - 0.12) / 0.88, 1.6);
+      ov.style.opacity = o.toFixed(3);
+      this._flashRAF = requestAnimationFrame(step);
+    };
+    ov.style.opacity = peak.toFixed(3);
+    this._flashRAF = requestAnimationFrame(step);
+  }
+
   showMenu(best) {
     $('menu').classList.remove('hidden');
     $('menu-best').textContent = best > 0 ? best.toLocaleString() : '—';
