@@ -107,10 +107,17 @@ export class Game {
     this._hitStop = 0;
     this.grenadeMgr = new GrenadeManager(this.engine.scene, this.engine.camera, () => this.enemies.zombies, 24);
     this.grenadeMgr.onChange = (n) => this.hud.setGrenades(n);
+    this.grenadeMgr.onTacticalChange = (n) => this.hud.setTacticals(n);
     this.grenadeMgr.onExplode = (pos) => {
       this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xffa030, 5);
       this.shake.add(0.7);
       this._hitStop = Math.max(this._hitStop, 0.05);
+      this.audio.explosion();
+    };
+    this.grenadeMgr.onFlash = (pos, blind) => {
+      // bright bluish pop at the detonation point
+      this.impacts.spawn(pos.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xcfe6ff, 4);
+      if (blind > 0.02) { this.hud.flashbang(blind); this.shake.add(0.25 * blind); }
       this.audio.explosion();
     };
     this.combo = 0; this.comboTimer = 0;
@@ -237,6 +244,7 @@ export class Game {
     this.input.onSwitch = (i) => { if (this.state === 'playing') this.weapons.switchTo(i); };
     this.input.onSwitchNext = () => { if (this.state === 'playing') this.weapons.next(); };
     this.input.onGrenade = () => { if (this.state === 'playing') this.grenadeMgr.throw(); };
+    this.input.onTactical = () => { if (this.state === 'playing') this.grenadeMgr.throwTactical(); };
   }
 
   // Swap the arena from the menu. Disposes the old world and rewires the entities
