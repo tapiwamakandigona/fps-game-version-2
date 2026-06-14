@@ -119,9 +119,17 @@ export class Game {
     };
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
+    this.player.onSlide = () => { this.shake.add(0.18); };
     // Juice: shake on fire, sparks at impact points.
     this.weapons.onShoot = (type) => this.shake.add(
       { shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
+    this.weapons.onRecoil = (cfg, ads) => this._applyRecoil(cfg, ads);
+    // ADS / recoil state.
+    this._baseFov = this.engine.camera.fov;
+    this._adsT = 0;
+    this._lookZoom = 1;
+    this._recoil = { x: 0, y: 0 };
+    this._recoilTarget = { x: 0, y: 0 };
     this.weapons.onImpact = (point, isZomb, headshot) => {
       const color = isZomb ? (headshot ? 0xffe24d : 0xff5a5a) : 0xffd27f;
       this.impacts.spawn(point, color, headshot ? 1.5 : (isZomb ? 1.1 : 0.9));
@@ -358,13 +366,69 @@ export class Game {
   _applyTouchLook() {
     const { x, y } = this.input.consumeLook();
     if (!x && !y) return;
+    const z = this._lookZoom;       // ADS steadies touch aim too
     const cam = this.engine.camera;
     this._euler.setFromQuaternion(cam.quaternion);
-    this._euler.y -= x;
-    this._euler.x -= y;
+    this._euler.y -= x * z;
+    this._euler.x -= y * z;
     const lim = Math.PI / 2 - 0.02;
     this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
     cam.quaternion.setFromEuler(this._euler);
+  }
+
+  // Accumulate a view kick from a shot. ADS reduces recoil (steadier aim).
+  _applyRecoil(cfg, ads) {
+    const mul = ads ? 0.6 : 1;
+    const D = Math.PI / 180;
+    this._recoilTarget.x += (cfg.pitch || 0) * D * mul;
+    this._recoilTarget.y += (cfg.yaw || 0) * D * mul * (Math.random() < 0.5 ? -1 : 1);
+  }
+
+  // Rotate the camera by a small pitch/yaw delta, composing with mouse/touch look.
+  _addCameraRot(dPitch, dYaw) {
+    if (!dPitch && !dYaw) return;
+    const cam = this.engine.camera;
+    this._euler.setFromQuaternion(cam.quaternion);
+    this._euler.y += dYaw;
+    this._euler.x += dPitch; // +x looks up
+    const lim = Math.PI / 2 - 0.02;
+    this._euler.x = Math.max(-lim, Math.min(lim, this._euler.x));
+    cam.quaternion.setFromEuler(this._euler);
+  }
+
+  // ADS blend (FOV zoom + centred viewmodel + steadier aim) and recoil apply/recovery.
+  _updateAdsRecoil(dt) {
+    const playing = this.state === 'playing';
+    const wantAds = playing && this.input.ads && this.player && this.player.alive && !this.player.sprinting;
+    this.weapons.adsActive = wantAds;
+    this._adsT += ((wantAds ? 1 : 0) - this._adsT) * Math.min(1, dt * 14);
+    if (this._adsT < 0.0005) this._adsT = 0;
+
+    // FOV zoom
+    const ac = this.weapons.adsConfig;
+    const fov = this._baseFov + (ac.fov - this._baseFov) * this._adsT;
+    const cam = this.engine.camera;
+    if (Math.abs(cam.fov - fov) > 0.02) { cam.fov = fov; cam.updateProjectionMatrix(); }
+
+    // Centre the viewmodel toward the sightline while aiming.
+    const g = this.weapons.current.group;
+    g.position.x = 0.22 + (0.0 - 0.22) * this._adsT;
+    g.position.y = -0.22 + (-0.135 - -0.22) * this._adsT;
+
+    // Steady the aim: scale look sensitivity by the ADS zoom factor.
+    const zoom = 1 + (ac.zoomMul - 1) * this._adsT;
+    this._lookZoom = zoom;
+    if (this.controls) this.controls.pointerSpeed = this.settings.get('sensitivity') * zoom;
+
+    // Recoil: snap toward the accumulated target, then ease the target back to 0.
+    const rl = Math.min(1, dt * 22);
+    const nx = this._recoil.x + (this._recoilTarget.x - this._recoil.x) * rl;
+    const ny = this._recoil.y + (this._recoilTarget.y - this._recoil.y) * rl;
+    this._addCameraRot(nx - this._recoil.x, ny - this._recoil.y);
+    this._recoil.x = nx; this._recoil.y = ny;
+    const rec = Math.min(1, dt * 8);
+    this._recoilTarget.x += (0 - this._recoilTarget.x) * rec;
+    this._recoilTarget.y += (0 - this._recoilTarget.y) * rec;
   }
 
   _loop() {
@@ -397,6 +461,10 @@ export class Game {
       this.minimap.update(this.engine.camera, this.enemies.zombies, this.world.colliders);
       if (!this.player.alive) this._end(false);
     }
+
+    // ADS zoom + recoil compose on top of look input (runs every frame so the
+    // view eases back to base FOV when not aiming / not playing).
+    this._updateAdsRecoil(dt);
 
     // Screen shake: layer a transient offset onto the camera for THIS rendered
     // frame only, then revert it so physics/aim are never affected.

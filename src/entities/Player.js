@@ -6,6 +6,13 @@ const EYE = 1.7;
 const STAMINA_DRAIN = 1 / 4.5;   // empties in ~4.5s of sprinting
 const STAMINA_REGEN = 1 / 6.0;   // refills in ~6s of rest
 const EXHAUST_RECOVER = 0.35;    // must recover to this before sprinting again
+// Crouch / slide (COD movement)
+const CROUCH_OFF = 0.70;         // view drop when crouched (eye 1.7 -> 1.0)
+const SLIDE_OFF = 0.80;          // view drop during a slide (eye 1.7 -> 0.9)
+const SLIDE_SPEED = 14.7;        // initial slide burst speed
+const SLIDE_DUR = 0.6;           // seconds
+const SLIDE_CD = 1.2;            // cooldown before the next slide
+const CROUCH_MUL = 0.55;         // crouch-walk speed multiplier
 
 export class Player {
   constructor(camera, colliders) {
@@ -32,6 +39,14 @@ export class Player {
     this._bobAmp = 0;
     this._landDip = 0;
     this.onLand = null;       // callback(strength 0..1)
+    // crouch / slide state
+    this.crouching = false;
+    this.sliding = false;
+    this._slideT = 0;
+    this._slideCd = 0;
+    this._crouchOffset = 0;
+    this._slideDir = new THREE.Vector3();
+    this.onSlide = null;      // callback() when a slide starts
   }
 
   spawn(pos) {
@@ -40,6 +55,7 @@ export class Player {
     this.velY = 0; this.alive = true; this._regenT = 0;
     this.eyeY = EYE; this.stamina = 1; this.sprinting = false; this._exhausted = false;
     this._bobPhase = 0; this._bobAmp = 0; this._landDip = 0; this.onGround = true;
+    this.crouching = false; this.sliding = false; this._slideT = 0; this._slideCd = 0; this._crouchOffset = 0;
   }
 
   update(dt, input) {
@@ -55,9 +71,20 @@ export class Player {
     const pos = this.camera.position;
     const moving = len > 0.001;
 
-    // sprint gated by stamina (with exhaustion hysteresis so it can't stutter)
-    const wantSprint = input.sprint && moving && this.onGround &&
-      !this._exhausted && this.stamina > 0;
+    this._slideCd = Math.max(0, this._slideCd - dt);
+    const wantCrouch = !!input.crouch;
+    const sprintHeld = input.sprint && !this._exhausted && this.stamina > 0;
+
+    // Start a slide: crouch pressed while sprinting forward with momentum.
+    if (!this.sliding && wantCrouch && sprintHeld && moving && this.onGround &&
+        this._slideCd <= 0 && len > 0.4) {
+      this.sliding = true; this._slideT = SLIDE_DUR; this._slideCd = SLIDE_CD;
+      this._slideDir.set(this._fwd.x * mz + this._right.x * mx, 0, this._fwd.z * mz + this._right.z * mx).normalize();
+      if (this.onSlide) this.onSlide();
+    }
+
+    // sprint gated by stamina (no sprint while crouching or sliding)
+    const wantSprint = sprintHeld && moving && this.onGround && !wantCrouch && !this.sliding;
     this.sprinting = wantSprint;
     if (wantSprint) {
       this.stamina = Math.max(0, this.stamina - STAMINA_DRAIN * dt);
@@ -67,12 +94,22 @@ export class Player {
       if (this._exhausted && this.stamina >= EXHAUST_RECOVER) this._exhausted = false;
     }
 
-    if (moving) {
-      const spd = this.speed * (wantSprint ? this.sprintMul : 1) * dt;
+    if (this.sliding) {
+      this._slideT -= dt;
+      const p = 1 - Math.max(0, this._slideT) / SLIDE_DUR;     // 0 -> 1 over the slide
+      const spd = (SLIDE_SPEED * (1 - p) + this.speed * CROUCH_MUL * p) * dt;
+      pos.x += this._slideDir.x * spd; pos.z += this._slideDir.z * spd;
+      this._resolve(pos);
+      if (this._slideT <= 0 || !this.onGround) this.sliding = false;
+    } else if (moving) {
+      let mul = wantSprint ? this.sprintMul : 1;
+      if (wantCrouch) mul *= CROUCH_MUL;
+      const spd = this.speed * mul * dt;
       pos.x += (this._fwd.x * mz + this._right.x * mx) * spd;
       pos.z += (this._fwd.z * mz + this._right.z * mx) * spd;
       this._resolve(pos);
     }
+    this.crouching = wantCrouch && !this.sliding;
 
     // jump + gravity (act on eyeY; camera.y gets visual bob/dip layered on after)
     if (input.jump && this.onGround) { this.velY = 8.2; this.onGround = false; }
@@ -89,13 +126,17 @@ export class Player {
       this.onGround = true;
     }
 
-    // view bob while moving on the ground; springy landing dip
-    const targetAmp = (moving && this.onGround) ? (this.sprinting ? 0.085 : 0.05) : 0;
+    // view bob while moving on the ground; springy landing dip (suppressed while crouched/sliding)
+    const lowStance = this.crouching || this.sliding;
+    const targetAmp = (moving && this.onGround && !lowStance) ? (this.sprinting ? 0.085 : 0.05) : 0;
     this._bobAmp += (targetAmp - this._bobAmp) * Math.min(1, dt * 8);
-    if (moving && this.onGround) this._bobPhase += dt * (this.sprinting ? 13 : 9);
+    if (moving && this.onGround && !lowStance) this._bobPhase += dt * (this.sprinting ? 13 : 9);
     const bobY = Math.sin(this._bobPhase) * this._bobAmp;
     this._landDip *= Math.max(0, 1 - dt * 7);
-    pos.y = this.eyeY + bobY - this._landDip;
+    // Smoothly drop the view for crouch/slide (separate from jump/gravity physics).
+    const targetOff = this.sliding ? SLIDE_OFF : (this.crouching ? CROUCH_OFF : 0);
+    this._crouchOffset += (targetOff - this._crouchOffset) * Math.min(1, dt * 12);
+    pos.y = this.eyeY + bobY - this._landDip - this._crouchOffset;
 
     // hard arena clamp (safety net beyond the wall colliders)
     const lim = ARENA_HALF - 0.8;
