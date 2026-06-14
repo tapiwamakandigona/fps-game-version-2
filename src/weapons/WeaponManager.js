@@ -66,6 +66,7 @@ export class WeaponManager {
     this.active = i;
     this.weapons.forEach((w, idx) => w.setVisible(idx === i));
     const w = this.current;
+    if (w.onEquip) w.onEquip();   // play the raise-up animation
     this.hud.setWeapon(w.name);
     this.hud.setAmmo(w.mag, w.magSize, w.reserve);
   }

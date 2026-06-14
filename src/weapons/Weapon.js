@@ -26,6 +26,10 @@ export class Weapon {
     this._tracerStart = new THREE.Vector3();
     this.tracerPool = null;   // shared TracerPool (set by WeaponManager)
     this._ads = false;        // aiming down sights (set each frame by manager/Game)
+    this._sprint = false;     // lowered-gun sprint pose (set each frame by Game)
+    this._sprintBlend = 0;    // eased 0..1 sprint blend
+    this._equipT = 0;         // equip raise-up timer (counts down)
+    this._equipDur = 0.34;    // equip animation length (s)
     this.onRecoil = null;     // (recoilCfg, ads) => void  — view kick, handled by Game
     this.onAmmoChange = null;
     this.onHit = null; // (zombie, headshot, point)
@@ -106,6 +110,9 @@ export class Weapon {
   }
 
   setVisible(v) { this.group.visible = v; }
+
+  // Called when this weapon becomes the active one — plays a quick raise-up.
+  onEquip() { this._equipT = this._equipDur; this._sprintBlend = 0; }
 
   tryFire() {
     if (this.reloading || this.cooldown > 0) return;
@@ -286,6 +293,29 @@ export class Weapon {
       reYaw = Math.cos(this._swayT * 1.1) * 0.018 * a;
       reRoll = Math.sin(this._swayT * 1.3) * 0.014 * a;
       rePitch = Math.sin(this._swayT * 2.1) * 0.010 * a;
+    }
+
+    // --- Sprint pose: lower & cant the weapon while sprinting (suppressed when
+    // reloading/ADS). Eased so it blends in/out smoothly instead of snapping. ---
+    const sprintWanted = this._sprint && !this.reloading ? 1 : 0;
+    this._sprintBlend += (sprintWanted - this._sprintBlend) * Math.min(1, dt * 10);
+    if (this._sprintBlend > 0.001) {
+      const sb = this._sprintBlend;
+      const idle = 1 - sb;                 // fade idle sway out as the gun lowers
+      reYaw = reYaw * idle + 0.26 * sb;    // tilt inward
+      reRoll = reRoll * idle + 0.55 * sb;  // cant the weapon
+      rePitch = rePitch * idle + 0.42 * sb; // drop the muzzle
+      reZ += 0.05 * sb;                    // pull toward the player
+    }
+
+    // --- Equip raise-up: when freshly drawn, the gun rises from below to neutral. ---
+    if (this._equipT > 0) {
+      this._equipT = Math.max(0, this._equipT - dt);
+      const e = 1 - this._equipT / this._equipDur;   // 0 -> 1
+      const lift = (1 - e) * (1 - e);                // ease-out (strong at start)
+      rePitch += 0.7 * lift;                          // start muzzle-down, settle level
+      reZ += 0.12 * lift;                             // start pulled back, settle forward
+      reRoll += 0.25 * lift;
     }
 
     const recPitch = this.recoil * (this.cfg.type === 'shotgun' ? 0.26 : 0.18);

@@ -3,7 +3,7 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v10 · 2026-06-14';
+export const BUILD = 'v11 · 2026-06-14';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -628,6 +628,8 @@ export class Game {
       if (this.touch) this._applyTouchLook();
       this.controls.update();   // compose fresh aim before movement reads it
       this.player.update(dt, this.input);
+      // Lower the weapon while sprinting (not while aiming).
+      if (this.weapons.current) this.weapons.current._sprint = this.player.sprinting && !this.weapons.adsActive;
       this.weapons.update(dt, this.input.mouseDown);
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
