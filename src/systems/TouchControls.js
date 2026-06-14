@@ -26,7 +26,9 @@ export class TouchControls {
         <button id="t-swap" class="t-btn t-small">SWAP</button>
         <button id="t-nade" class="t-btn t-small">NADE</button>
         <button id="t-reload" class="t-btn t-small">RELOAD</button>
+        <button id="t-crouch" class="t-btn t-small">CROUCH</button>
         <button id="t-jump" class="t-btn t-small">JUMP</button>
+        <button id="t-ads" class="t-btn t-small">ADS</button>
         <button id="t-fire" class="t-btn t-fire">FIRE</button>
       </div>`;
     container.appendChild(root);
@@ -40,7 +42,7 @@ export class TouchControls {
   setEnabled(v) {
     this.enabled = v;
     this.root.style.display = v ? 'block' : 'none';
-    if (!v) { this._resetJoy(); this.input.axisX = 0; this.input.axisZ = 0; this.input.touchSprint = false; this.input.setJump(false); this.input.fireUp(); }
+    if (!v) { this._resetJoy(); this.input.axisX = 0; this.input.axisZ = 0; this.input.touchSprint = false; this.input.setJump(false); this.input.fireUp(); this.input.adsUp(); this.input.setCrouch(false); }
   }
 
   _resetJoy() {
@@ -107,6 +109,18 @@ export class TouchControls {
     jump.addEventListener('touchstart', (e) => { stop(e); this.input.setJump(true); });
     jump.addEventListener('touchend', (e) => { stop(e); this.input.setJump(false); });
     jump.addEventListener('touchcancel', () => this.input.setJump(false));
+
+    // ADS — hold to aim down sights.
+    const ads = this.root.querySelector('#t-ads');
+    ads.addEventListener('touchstart', (e) => { stop(e); this.input.adsDown(); });
+    ads.addEventListener('touchend', (e) => { stop(e); this.input.adsUp(); });
+    ads.addEventListener('touchcancel', () => this.input.adsUp());
+
+    // CROUCH — hold to crouch; hold while sprinting (full stick) to slide.
+    const crouch = this.root.querySelector('#t-crouch');
+    crouch.addEventListener('touchstart', (e) => { stop(e); this.input.setCrouch(true); });
+    crouch.addEventListener('touchend', (e) => { stop(e); this.input.setCrouch(false); });
+    crouch.addEventListener('touchcancel', () => this.input.setCrouch(false));
 
     this.root.querySelector('#t-reload').addEventListener('touchstart', (e) => { stop(e); this.input.triggerReload(); });
     this.root.querySelector('#t-swap').addEventListener('touchstart', (e) => { stop(e); this.input.triggerSwap(); });

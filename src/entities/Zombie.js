@@ -23,6 +23,7 @@ export class Zombie {
     this.alive = true;
     this.dead = false;          // fully finished (ready to remove)
     this.attackCd = 0;
+    this.lunge = 0;             // brief forward bite-lean on melee (0..0.4)
     this.flash = 0;
     this.deathT = 0;
     this.onDeath = null;        // (zombie) => void
@@ -153,6 +154,10 @@ export class Zombie {
     this.legL.rotation.x = swing; this.legR.rotation.x = -swing;
     this.armL.rotation.x = -1.3 + Math.sin(t * 7) * 0.15;
     this.armR.rotation.x = -1.3 - Math.sin(t * 7) * 0.15;
+
+    // lunge bite: lean the torso in toward the player on a melee hit, then ease back
+    if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 2.5);
+    this.group.rotation.x = -this.lunge * 0.5;
 
     // hit flash (emissive red pulse on shared mats — brief, looks fine)
     if (this.flash > 0) {
