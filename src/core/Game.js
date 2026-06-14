@@ -25,6 +25,7 @@ import { DamageNumbers } from '../ui/DamageNumbers.js';
 import { Impacts } from '../ui/Impacts.js';
 import { ScreenShake } from '../systems/ScreenShake.js';
 import { UpgradeShop } from '../ui/UpgradeShop.js';
+import { PerfMeter, AdaptiveQuality } from '../systems/Perf.js';
 
 const COMBO_WINDOW = 3.0; // seconds between kills to keep a combo alive
 
@@ -33,6 +34,9 @@ const HS_KEY = 'fps-v2-highscore';
 export class Game {
   constructor() {
     this.engine = new Engine(document.getElementById('game-canvas'));
+    // Perf instrumentation + adaptive resolution (holds ~60fps on weaker devices).
+    this.perf = new PerfMeter(this.engine.renderer);
+    this.adaptive = new AdaptiveQuality(this.engine);
     this.hud = new HUD();
     this.minimap = new Minimap(document.getElementById('hud'));
     this.input = new Input();
@@ -58,6 +62,8 @@ export class Game {
     this.settings = new Settings(this);
     this.settingsPanel = new SettingsPanel(this.settings, container, () => this._closeSettings());
     this.settings.apply();
+    // Adaptive quality uses the chosen preset as its ceiling (only scales down from there).
+    this.adaptive.setCeiling(this.settings.get('quality'));
 
     this._wireButtons();
 
@@ -65,6 +71,11 @@ export class Game {
     if (this.touch) this._applyTouchMenu();
     this.hud.showMenu(this.best);
     this.engine.camera.position.copy(this.world.playerSpawn);
+
+    // Perf overlay toggle: backtick (`) or F3, available any time.
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.perf.toggle(); }
+    });
 
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
@@ -97,6 +108,15 @@ export class Game {
     this.shop.spendScore = (c) => { this.score = Math.max(0, this.score - c); this.hud.setScore(this.score); };
     this.shop.onApply = (id) => this._applyUpgrade(id);
     this.shop.onDeploy = () => this._closeShop();
+
+    // Curated bullet raycast targets: world solids + live enemy groups only.
+    // Rebuilt per trigger pull — a few dozen entries vs. the whole scene graph.
+    this.weapons.getTargets = () => {
+      const t = this.world.solids ? this.world.solids.slice() : [];
+      const zs = this.enemies.zombies;
+      for (let i = 0; i < zs.length; i++) if (zs[i].alive) t.push(zs[i].group);
+      return t;
+    };
 
     this.player.onHurt = () => { this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4); };
     // Juice: shake on fire, sparks at impact points.
@@ -349,6 +369,7 @@ export class Game {
 
   _loop() {
     requestAnimationFrame(this._loop);
+    this.perf.begin();
     const rawDt = Math.min(this.clock.getDelta(), 0.05);
     let dt = rawDt;
     // hit-stop: briefly slow the world for a punchy impact (real time still elapses)
@@ -384,5 +405,10 @@ export class Game {
     cam.position.x += sh.x; cam.position.y += sh.y; cam.position.z += sh.z;
     this.engine.render();
     cam.position.x -= sh.x; cam.position.y -= sh.y; cam.position.z -= sh.z;
+
+    // Measure this frame + let the adaptive controller react.
+    const frameMs = this.perf.end();
+    this.perf.setQualityInfo(this.adaptive.info);
+    this.adaptive.update(rawDt, frameMs);
   }
 }

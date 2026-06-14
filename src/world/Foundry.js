@@ -13,6 +13,7 @@ export class Foundry {
     scene.add(this.root);
     this.name = 'FOUNDRY';
     this.colliders = [];
+    this.solids = [];          // bullet-blocking meshes (curated raycast targets)
     this.enemySpawns = [];
     this.lamps = [];           // magma glow lights we pulse
     this.playerSpawn = new THREE.Vector3(0, 1.7, ARENA_HALF - 4);
@@ -50,7 +51,7 @@ export class Foundry {
     mesh.position.set(x, y, z);
     mesh.castShadow = shadow; mesh.receiveShadow = true;
     this.root.add(mesh);
-    if (collide) this.colliders.push(new THREE.Box3().setFromObject(mesh));
+    if (collide) { this.colliders.push(new THREE.Box3().setFromObject(mesh)); this.solids.push(mesh); }
     return mesh;
   }
 
@@ -59,10 +60,12 @@ export class Foundry {
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(H * 2, H * 2), this.matFloor);
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
     this.root.add(floor);
+    this.solids.push(floor);
 
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(H * 2, H * 2), this.matWall);
     ceil.rotation.x = Math.PI / 2; ceil.position.y = 9;
     this.root.add(ceil);
+    this.solids.push(ceil);
 
     const t = 1, wallH = 9, yC = wallH / 2;
     this._box(H * 2, wallH, t, 0, yC, -H, this.matWall);
@@ -84,13 +87,14 @@ export class Foundry {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(s.w, s.d), this.matMagma);
       m.rotation.x = -Math.PI / 2; m.position.set(s.x, 0.03, s.z);
       this.root.add(m);
-      // a few warm lights spaced along the channel
-      const steps = Math.max(2, Math.round(Math.max(s.w, s.d) / 12));
+      // Fewer, brighter, longer-range warm lights along each channel — same warm
+      // coverage with ~half the dynamic lights (cheaper on mobile GPUs).
+      const steps = Math.max(1, Math.round(Math.max(s.w, s.d) / 22));
       for (let i = 0; i < steps; i++) {
         const f = steps === 1 ? 0.5 : i / (steps - 1);
         const lx = s.w > s.d ? s.x - s.w / 2 + f * s.w : s.x;
         const lz = s.d > s.w ? s.z - s.d / 2 + f * s.d : s.z;
-        const pl = new THREE.PointLight(0xff6a1e, 9, 18, 2);
+        const pl = new THREE.PointLight(0xff6a1e, 13, 26, 2);
         pl.position.set(lx, 1.0, lz);
         this.root.add(pl);
         this.lamps.push(pl);
@@ -130,6 +134,7 @@ export class Foundry {
     }
     crates.instanceMatrix.needsUpdate = true;
     this.root.add(crates);
+    this.solids.push(crates);
 
     for (const p of [[-20, -20], [20, -20], [0, -21], [-21, 0], [21, 0], [-18, -12], [18, -12]]) {
       this.enemySpawns.push(new THREE.Vector3(p[0], 0, p[1]));
@@ -166,7 +171,7 @@ export class Foundry {
   // Pulse the magma glow.
   update(t) {
     for (let i = 0; i < this.lamps.length; i++) {
-      this.lamps[i].intensity = 8 + Math.sin(t * 2.4 + i * 0.9) * 2.2 + (Math.random() < 0.03 ? 2 : 0);
+      this.lamps[i].intensity = 12 + Math.sin(t * 2.4 + i * 0.9) * 2.6 + (Math.random() < 0.03 ? 2.5 : 0);
     }
   }
 
@@ -179,6 +184,6 @@ export class Foundry {
     for (const m of [this.matFloor, this.matWall, this.matMetal, this.matFurnace, this.matCrate, this.matMagma]) {
       if (m) m.dispose();
     }
-    this.colliders.length = 0; this.enemySpawns.length = 0; this.lamps.length = 0;
+    this.colliders.length = 0; this.solids.length = 0; this.enemySpawns.length = 0; this.lamps.length = 0;
   }
 }

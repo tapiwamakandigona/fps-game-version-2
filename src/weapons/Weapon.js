@@ -22,9 +22,13 @@ export class Weapon {
     this.raycaster.far = 140;
     this._dir = new THREE.Vector3();
     this._tmp = new THREE.Vector3();
-    this.tracers = [];
+    this._tracerStart = new THREE.Vector3();
+    this.tracerPool = null;   // shared TracerPool (set by WeaponManager)
     this.onAmmoChange = null;
     this.onHit = null; // (zombie, headshot, point)
+    // Curated raycast target provider: returns the small list of bullet-blocking
+    // meshes + live enemy groups instead of the whole scene graph. Set by Game.
+    this.getTargets = null;
     this._buildModel();
   }
 
@@ -111,6 +115,8 @@ export class Weapon {
     if (this.onShoot) this.onShoot(this.cfg.type);
     const pellets = this.cfg.pellets || 1;
     const acc = new Map();  // aggregate per-zombie damage so a shotgun blast = one number/sound
+    // Resolve the curated target list once per trigger pull (shared by all pellets).
+    this._targets = this.getTargets ? this.getTargets() : null;
     for (let i = 0; i < pellets; i++) this._fireOne(pellets > 1, acc);
     for (const [zomb, e] of acc) {
       this.audio.hit(e.headshot);
@@ -141,7 +147,11 @@ export class Weapon {
       this._dir.normalize();
     }
     this.raycaster.set(this.camera.position, this._dir);
-    const hits = this.raycaster.intersectObjects(this.scene.children, true);
+    // Raycast only the curated target list (world solids + live enemies) when
+    // available — far cheaper than recursing the entire scene every pellet.
+    const hits = this._targets
+      ? this.raycaster.intersectObjects(this._targets, true)
+      : this.raycaster.intersectObjects(this.scene.children, true);
     let endPoint = this._tmp.copy(this.camera.position).addScaledVector(this._dir, this.raycaster.far);
     for (const h of hits) {
       if (this._ignored(h.object)) continue;
@@ -168,13 +178,8 @@ export class Weapon {
   _spawnTracer(endWorld) {
     // muzzle world position
     this.group.updateWorldMatrix(true, false);
-    const start = this._muzzlePos.clone().applyMatrix4(this.group.matrixWorld);
-    const geo = new THREE.BufferGeometry().setFromPoints([start, endWorld]);
-    const mat = new THREE.LineBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.9 });
-    const line = new THREE.Line(geo, mat);
-    line.userData.noHit = true;
-    this.scene.add(line);
-    this.tracers.push({ line, ttl: 0.07 });
+    const start = this._tracerStart.copy(this._muzzlePos).applyMatrix4(this.group.matrixWorld);
+    if (this.tracerPool) this.tracerPool.spawn(start, endWorld);
   }
 
   reload() {
@@ -217,17 +222,7 @@ export class Weapon {
     this.group.rotation.x = this.recoil * (this.cfg.type === 'shotgun' ? 0.26 : 0.18);
     if (this.flash.material.opacity > 0) this.flash.material.opacity = Math.max(0, this.flash.material.opacity - dt * 9);
     if (this.muzzleLight.intensity > 0) this.muzzleLight.intensity = Math.max(0, this.muzzleLight.intensity - dt * 40);
-
-    for (let i = this.tracers.length - 1; i >= 0; i--) {
-      const tr = this.tracers[i];
-      tr.ttl -= dt;
-      tr.line.material.opacity = Math.max(0, (tr.ttl / 0.07) * 0.9);
-      if (tr.ttl <= 0) {
-        this.scene.remove(tr.line);
-        tr.line.geometry.dispose(); tr.line.material.dispose();
-        this.tracers.splice(i, 1);
-      }
-    }
+    // Tracers are now updated centrally by the shared TracerPool (WeaponManager).
   }
 
   reset() {
@@ -235,7 +230,5 @@ export class Weapon {
     this.maxReserve = this.cfg.maxReserve ?? this.reserve;
     this.damageMult = 1; this.reloadMult = 1;
     this.reloading = false; this.cooldown = 0; this.recoil = 0;
-    for (const tr of this.tracers) { this.scene.remove(tr.line); tr.line.geometry.dispose(); tr.line.material.dispose(); }
-    this.tracers = [];
   }
 }

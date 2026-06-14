@@ -1,4 +1,5 @@
 import { Weapon } from './Weapon.js';
+import { TracerPool } from './TracerPool.js';
 
 export const WEAPON_CONFIGS = [
   // Pistol: infinite reserve — always usable so you can never fully soft-lock.
@@ -20,6 +21,8 @@ export class WeaponManager {
   constructor(camera, scene, audio, hud) {
     this.hud = hud;
     this.weapons = WEAPON_CONFIGS.map((cfg) => new Weapon(camera, scene, audio, cfg));
+    this.tracers = new TracerPool(scene);
+    for (const w of this.weapons) w.tracerPool = this.tracers;
     this.active = 0;
     for (const w of this.weapons) {
       w.onAmmoChange = (mag, max, reserve) => { if (w === this.current) this.hud.setAmmo(mag, max, reserve); };
@@ -28,10 +31,12 @@ export class WeaponManager {
     this.onHit = null;
     this.onImpact = null;  // (point, isZombie, headshot)
     this.onShoot = null;   // (type)
+    this.getTargets = null; // () => Object3D[]  curated raycast targets (set by Game)
     for (const w of this.weapons) {
       w.onHit = (z, hs, p, dmg) => { if (this.onHit) this.onHit(z, hs, p, dmg); };
       w.onImpact = (p, isZ, hs) => { if (this.onImpact) this.onImpact(p, isZ, hs); };
       w.onShoot = (type) => { if (this.onShoot) this.onShoot(type); };
+      w.getTargets = () => (this.getTargets ? this.getTargets() : null);
     }
     this.switchTo(0);
   }
@@ -59,10 +64,11 @@ export class WeaponManager {
     for (const w of this.weapons) { if (w.addReserve(amount)) any = true; }
     return any;
   }
-  update(dt, holding) { this.current.update(dt, holding); }
+  update(dt, holding) { this.current.update(dt, holding); this.tracers.update(dt); }
 
   reset() {
     for (const w of this.weapons) w.reset();
+    this.tracers.reset();
     this.switchTo(0);
   }
 }

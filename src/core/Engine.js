@@ -10,7 +10,10 @@ export class Engine {
   constructor(canvas) {
     this.canvas = canvas;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    // MSAA is one of the most expensive GPU ops on mobile (4x fragment cost) and
+    // the bloom/output passes already soften edges — disable AA on touch devices.
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ('ontouchstart' in window);
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, powerPreference: 'high-performance' });
     // Clamp pixel ratio harder — 2x on a hi-DPI display means 4x the pixels and
     // is the single biggest perf cost. 1.5 looks crisp and runs much faster.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));

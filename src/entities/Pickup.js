@@ -29,11 +29,10 @@ export class Pickup {
     this.mesh.position.set(pos.x, 0.6, pos.z);
     this.mesh.userData.noHit = true;       // don't block bullets
     this.mesh.castShadow = false;
-    // small glow so it pops in the dark warehouse
-    this.light = new THREE.PointLight(color, 0.9, 4, 2);
-    this.light.position.copy(this.mesh.position);
+    // No per-pickup PointLight: the emissive material + bloom already make drops
+    // pop in the dark, and dynamic lights are expensive on mobile (one fragment
+    // pass each). Dropping them saves up to ~8 lights with many pickups on screen.
     scene.add(this.mesh);
-    scene.add(this.light);
   }
 
   // returns 'collected' | 'expired' | null
@@ -43,7 +42,6 @@ export class Pickup {
     const y = 0.55 + Math.sin(this.t * 3) * 0.12;
     this.mesh.position.y = y;
     this.mesh.rotation.y += dt * 2.2;
-    this.light.position.y = y;
     // fade in the last 3s
     if (this.life < 3) this._mat.opacity = Math.max(0, this.life / 3);
 
@@ -56,7 +54,6 @@ export class Pickup {
 
   dispose() {
     this.scene.remove(this.mesh);
-    this.scene.remove(this.light);
     this._mat.dispose();
   }
 }

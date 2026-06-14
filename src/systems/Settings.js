@@ -17,6 +17,7 @@ export class Settings {
     const v = this.values;
     this.game.engine.setExposure(v.brightness);
     this.game.engine.setQuality(v.quality);
+    if (this.game.adaptive) this.game.adaptive.setCeiling(v.quality);
     this.game.audio.setVolume(v.volume);
     if (this.game.controls) this.game.controls.pointerSpeed = v.sensitivity;
     if (this.game.touchControls) this.game.touchControls.lookSens = BASE_LOOK_SENS * v.sensitivity;
