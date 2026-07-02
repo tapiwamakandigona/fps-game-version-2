@@ -36,12 +36,12 @@ export class Rooftop {
       map: concreteTexture(4, '#2a2d34'), roughness: 0.9, metalness: 0.05, color: 0x8b919c,
     });
     this.matMetal = new THREE.MeshStandardMaterial({
-      map: metalTexture(2, '#343841'), roughness: 0.45, metalness: 0.85, color: 0x9aa2b0,
+      map: metalTexture(2, '#4a505c'), roughness: 0.5, metalness: 0.6, color: 0xbcc4d2,
     });
     this.matShed = new THREE.MeshStandardMaterial({
-      map: concreteTexture(2, '#2e3138'), roughness: 0.85, metalness: 0.1, color: 0x8f95a0,
+      map: concreteTexture(2, '#3a3e48'), roughness: 0.85, metalness: 0.1, color: 0xaab0bc,
     });
-    this.matCrate = new THREE.MeshStandardMaterial({ map: crateTexture('#4a5a6a'), roughness: 0.7, metalness: 0.2, color: 0xaab4c0 });
+    this.matCrate = new THREE.MeshStandardMaterial({ map: crateTexture('#5a6a7c'), roughness: 0.7, metalness: 0.2, color: 0xc4cedc });
     this.matPad = new THREE.MeshStandardMaterial({
       map: concreteTexture(3, '#1d2026'), roughness: 0.95, metalness: 0.04, color: 0x7c828e,
     });
@@ -217,8 +217,8 @@ export class Rooftop {
   }
 
   _buildLights() {
-    this.root.add(new THREE.AmbientLight(0x4c5570, 2.6));
-    this.root.add(new THREE.HemisphereLight(0x7488b0, 0x1c2028, 1.9));
+    this.root.add(new THREE.AmbientLight(0x5c6580, 3.4));
+    this.root.add(new THREE.HemisphereLight(0x8498c0, 0x242832, 2.6));
 
     // Cold moonlight.
     const moon = new THREE.DirectionalLight(0xbdd2ff, 2.1);
@@ -234,7 +234,7 @@ export class Rooftop {
 
     // Warm rooftop floods so the play space reads clearly at night.
     for (const [x, z] of [[-8, -2], [10, 10], [0, -18], [14, -8], [-14, 12], [0, 4]]) {
-      const pl = new THREE.PointLight(0xffe2b8, 26, 34, 2);
+      const pl = new THREE.PointLight(0xffe2b8, 34, 36, 2);
       pl.position.set(x, 6.5, z);
       this.root.add(pl);
     }
