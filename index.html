@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>FPS Arena v2 — Warehouse</title>
+  <meta name="theme-color" content="#05060a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -94,6 +99,15 @@
 
     <div id="loading" class="overlay">
       <div class="panel"><h2>Loading…</h2><p class="tagline">Fetching engine</p></div>
+    </div>
+
+    <!-- Landscape-only prompt (touch, portrait orientation) -->
+    <div id="rotate-overlay">
+      <div class="rotate-card">
+        <div class="rotate-icon">&#128241;</div>
+        <h2>ROTATE YOUR DEVICE</h2>
+        <p>FPS Arena plays in landscape.</p>
+      </div>
     </div>
 
     <!-- In-game fullscreen toggle (touch only) -->

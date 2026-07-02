@@ -163,6 +163,25 @@ body.is-touch #score { font-size: 20px; }
   body.is-touch #ammo-counts { font-size: 20px; }
 }
 
+/* ---------- Landscape-only prompt (touch) ----------
+   The game is designed for landscape; in portrait the HUD and button cluster
+   collide. On touch devices a full-screen prompt covers everything (Game.js
+   also auto-pauses a live run). Desktop is never affected. */
+#rotate-overlay { display: none; position: absolute; inset: 0; z-index: 60;
+  align-items: center; justify-content: center; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(10,12,20,0.92), rgba(3,4,8,0.99)); }
+.rotate-card h2 { font-size: 24px; letter-spacing: 4px; color: #fff; margin-top: 14px; }
+.rotate-card p { color: #9aa6b2; margin-top: 8px; letter-spacing: 1px; }
+.rotate-icon { font-size: 56px; display: inline-block; animation: rotateHint 1.8s ease-in-out infinite; }
+@keyframes rotateHint { 0%, 25% { transform: rotate(0deg); } 60%, 100% { transform: rotate(90deg); } }
+@media (orientation: portrait) {
+  body.is-touch #rotate-overlay { display: flex; }
+}
+
+/* Touch-only settings rows (aim assist / auto-fire) are hidden on desktop. */
+.set-row.touch-setting { display: none; }
+body.is-touch .set-row.touch-setting { display: grid; }
+
 /* Touch-only elements are hidden unless the device is touch-enabled. */
 .touch-only { display: none; }
 body.is-touch .touch-only { display: block; }

@@ -37,6 +37,20 @@ export class SettingsPanel {
           <input type="range" id="set-fov" min="70" max="110" step="1">
           <span class="set-val" id="set-fov-v"></span>
         </div>
+        <div class="set-row touch-setting">
+          <label>Aim assist</label>
+          <div class="set-seg" id="set-assist">
+            <button data-v="on">On</button>
+            <button data-v="off">Off</button>
+          </div>
+        </div>
+        <div class="set-row touch-setting">
+          <label>Auto-fire</label>
+          <div class="set-seg" id="set-autofire">
+            <button data-v="on">On</button>
+            <button data-v="off">Off</button>
+          </div>
+        </div>
         <div class="set-row">
           <label>Volume</label>
           <input type="range" id="set-volume" min="0" max="1" step="0.05">
@@ -64,6 +78,13 @@ export class SettingsPanel {
     this.el.querySelectorAll('#set-quality button').forEach((b) => {
       b.addEventListener('click', () => { s.set('quality', b.dataset.q); this._refreshQuality(); });
     });
+    // Touch-only combat helpers (rows are hidden on desktop via CSS).
+    this.el.querySelectorAll('#set-assist button').forEach((b) => {
+      b.addEventListener('click', () => { s.set('aimAssist', b.dataset.v === 'on'); this._refreshToggles(); });
+    });
+    this.el.querySelectorAll('#set-autofire button').forEach((b) => {
+      b.addEventListener('click', () => { s.set('autoFire', b.dataset.v === 'on'); this._refreshToggles(); });
+    });
     this.el.querySelector('#set-back').addEventListener('click', () => this.close());
   }
 
@@ -73,6 +94,14 @@ export class SettingsPanel {
     this.el.querySelector('#set-sens-v').textContent = s.sensitivity.toFixed(2) + '×';
     this.el.querySelector('#set-volume-v').textContent = Math.round(s.volume * 100) + '%';
     this.el.querySelector('#set-fov-v').textContent = Math.round(s.fov) + '\u00b0';
+  }
+
+  _refreshToggles() {
+    const s = this.settings.values;
+    this.el.querySelectorAll('#set-assist button').forEach((b) =>
+      b.classList.toggle('active', (b.dataset.v === 'on') === !!s.aimAssist));
+    this.el.querySelectorAll('#set-autofire button').forEach((b) =>
+      b.classList.toggle('active', (b.dataset.v === 'on') === !!s.autoFire));
   }
 
   _refreshQuality() {
@@ -89,6 +118,7 @@ export class SettingsPanel {
     this.el.querySelector('#set-fov').value = s.fov;
     this._refreshLabels();
     this._refreshQuality();
+    this._refreshToggles();
   }
 
   open() { this._syncInputs(); this.el.classList.remove('hidden'); }

@@ -3,7 +3,7 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v12 · 2026-06-14';
+export const BUILD = 'v13 · 2026-07-02';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -85,6 +85,7 @@ export class Game {
 
     this.hud.hideLoading();
     if (this.touch) this._applyTouchMenu();
+    this._watchOrientation();
     this.hud.showMenu(this.best);
     this.engine.camera.position.copy(this.world.playerSpawn);
 
@@ -159,6 +160,10 @@ export class Game {
       for (let i = 0; i < zs.length; i++) if (zs[i].alive) t.push(zs[i].group);
       return t;
     };
+    // Aim assist (touch): give weapons access to live zombies and apply the
+    // saved setting now that the weapon manager exists.
+    this.weapons.getZombies = () => this.enemies.zombies;
+    this.weapons.aimAssist = !!(this.touch && this.settings.get('aimAssist'));
 
     this.player.onHurt = () => {
       this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
@@ -357,6 +362,9 @@ export class Game {
     this.controls.addEventListener('unlock', () => {
       if (this.state === 'playing') { this.state = 'paused'; this.hud.showPause(true); this.input.setEnabled(false); }
     });
+    // Pointer lock can fail (permissions policy, embedded iframe, browser quirk).
+    // Without feedback the menu just appears dead — tell the player instead.
+    this.controls.addEventListener('lockerror', () => this._lockFailed());
   }
 
   _wireButtons() {
@@ -453,6 +461,34 @@ export class Game {
     } catch (e) { this.music = null; }
   }
 
+  // Pointer lock was denied: restore the menu button with a visible hint so the
+  // player knows what happened and can retry.
+  _lockFailed() {
+    const b = document.getElementById('start-btn');
+    if (!b) return;
+    b.textContent = 'MOUSE LOCK BLOCKED — CLICK AGAIN';
+    clearTimeout(this._lockMsgT);
+    this._lockMsgT = setTimeout(() => { b.textContent = 'CLICK TO PLAY'; }, 2600);
+  }
+
+  // Landscape-only on touch: a CSS overlay (#rotate-overlay) covers the screen in
+  // portrait; here we also auto-pause a live run so the player takes no damage
+  // while the phone is the wrong way up.
+  _watchOrientation() {
+    if (!this.touch || !window.matchMedia) return;
+    const mq = window.matchMedia('(orientation: portrait)');
+    const onChange = () => {
+      if (mq.matches && this.state === 'playing') {
+        this.state = 'paused';
+        this.hud.showPause(true);
+        this.input.setEnabled(false);
+        this.touchControls.setEnabled(false);
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+
   _requestLock() {
     this.audio.resume();
     this._ensureMusic();
@@ -462,7 +498,7 @@ export class Game {
       else if (this.state === 'paused') { this.state = 'playing'; this.hud.showPause(false); this.input.setEnabled(true); this.touchControls.setEnabled(true); }
       return;
     }
-    try { this.controls.lock(); } catch (e) {}
+    try { this.controls.lock(); } catch (e) { this._lockFailed(); }
   }
 
   _startRun() {
@@ -598,6 +634,24 @@ export class Game {
     return best ? best.group.position : null;
   }
 
+  // True when the first solid thing under the crosshair is a live zombie —
+  // walls and crates block the check, so auto-fire never wastes ammo on cover.
+  _enemyOnCrosshair() {
+    if (!this._afRay) { this._afRay = new THREE.Raycaster(); this._afRay.far = 80; this._afDir = new THREE.Vector3(); }
+    const cam = this.engine.camera;
+    cam.getWorldDirection(this._afDir);
+    this._afRay.set(cam.position, this._afDir);
+    const hits = this._afRay.intersectObjects(this.weapons.getTargets(), true);
+    for (const h of hits) {
+      let ignored = false;
+      for (let o = h.object; o; o = o.parent) if (o.userData && o.userData.noHit) { ignored = true; break; }
+      if (ignored) continue;
+      for (let o = h.object; o; o = o.parent) if (o.userData && o.userData.zombie) return o.userData.zombie.alive === true;
+      return false; // first solid hit was world geometry
+    }
+    return false;
+  }
+
   // Radial AoE explosion (used by the Mortar killstreak): damage + FX, like a grenade.
   _explodeAt(pos, radius = 6, baseDmg = 170) {
     for (const z of this.enemies.zombies) {
@@ -632,6 +686,16 @@ export class Game {
       // Lower the weapon while sprinting (not while aiming).
       if (this.weapons.current) this.weapons.current._sprint = this.player.sprinting && !this.weapons.adsActive;
       this.weapons.update(dt, this.input.mouseDown);
+      // Optional touch auto-fire: pulls the trigger while the crosshair rests on
+      // an enemy, so one thumb can stay on movement. Checked ~12×/s; the weapon's
+      // own fireInterval still limits the actual rate of fire.
+      if (this.touch && !this.input.mouseDown && this.settings.get('autoFire')) {
+        this._autoFireT = (this._autoFireT || 0) - dt;
+        if (this._autoFireT <= 0) {
+          this._autoFireT = 0.08;
+          if (this._enemyOnCrosshair()) this.weapons.fire();
+        }
+      }
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
       this.damageNumbers.update(dt);

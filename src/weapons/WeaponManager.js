@@ -49,12 +49,15 @@ export class WeaponManager {
     this.onRecoil = null;  // (recoilCfg, ads) — view kick, handled by Game
     this.adsActive = false; // set each frame by Game from input.ads
     this.getTargets = null; // () => Object3D[]  curated raycast targets (set by Game)
+    this.getZombies = null; // () => Zombie[]  live enemies for aim assist (set by Game)
+    this.aimAssist = false; // set each frame by Game (touch + setting)
     for (const w of this.weapons) {
       w.onHit = (z, hs, p, dmg) => { if (this.onHit) this.onHit(z, hs, p, dmg); };
       w.onImpact = (p, isZ, hs) => { if (this.onImpact) this.onImpact(p, isZ, hs); };
       w.onShoot = (type) => { if (this.onShoot) this.onShoot(type); };
       w.onRecoil = (cfg, ads) => { if (this.onRecoil) this.onRecoil(cfg, ads); };
       w.getTargets = () => (this.getTargets ? this.getTargets() : null);
+      w.getZombies = () => (this.getZombies ? this.getZombies() : null);
     }
     this.switchTo(0);
   }
@@ -85,6 +88,7 @@ export class WeaponManager {
   }
   update(dt, holding) {
     this.current._ads = this.adsActive;
+    this.current.aimAssist = this.aimAssist;
     this.current.update(dt, holding);
     this.tracers.update(dt);
   }
