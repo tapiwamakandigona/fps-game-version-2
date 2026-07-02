@@ -163,7 +163,9 @@ export class Game {
     // Aim assist (touch): give weapons access to live zombies and apply the
     // saved setting now that the weapon manager exists.
     this.weapons.getZombies = () => this.enemies.zombies;
-    this.weapons.aimAssist = !!(this.touch && this.settings.get('aimAssist'));
+    // (settings may not exist yet during construction; Settings.apply() sets
+    // the definitive value right after, so default to the saved/true value here.)
+    this.weapons.aimAssist = !!(this.touch && this.settings && this.settings.get('aimAssist'));
 
     this.player.onHurt = () => {
       this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
