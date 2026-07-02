@@ -51,6 +51,20 @@ export class SettingsPanel {
             <button data-v="off">Off</button>
           </div>
         </div>
+        <div class="set-row touch-setting">
+          <label>Vibration</label>
+          <div class="set-seg" id="set-haptics">
+            <button data-v="on">On</button>
+            <button data-v="off">Off</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <label>FPS meter</label>
+          <div class="set-seg" id="set-fps">
+            <button data-v="on">On</button>
+            <button data-v="off">Off</button>
+          </div>
+        </div>
         <div class="set-row">
           <label>Volume</label>
           <input type="range" id="set-volume" min="0" max="1" step="0.05">
@@ -85,6 +99,12 @@ export class SettingsPanel {
     this.el.querySelectorAll('#set-autofire button').forEach((b) => {
       b.addEventListener('click', () => { s.set('autoFire', b.dataset.v === 'on'); this._refreshToggles(); });
     });
+    this.el.querySelectorAll('#set-haptics button').forEach((b) => {
+      b.addEventListener('click', () => { s.set('haptics', b.dataset.v === 'on'); this._refreshToggles(); });
+    });
+    this.el.querySelectorAll('#set-fps button').forEach((b) => {
+      b.addEventListener('click', () => { s.set('fpsMeter', b.dataset.v === 'on'); this._refreshToggles(); });
+    });
     this.el.querySelector('#set-back').addEventListener('click', () => this.close());
   }
 
@@ -102,6 +122,10 @@ export class SettingsPanel {
       b.classList.toggle('active', (b.dataset.v === 'on') === !!s.aimAssist));
     this.el.querySelectorAll('#set-autofire button').forEach((b) =>
       b.classList.toggle('active', (b.dataset.v === 'on') === !!s.autoFire));
+    this.el.querySelectorAll('#set-haptics button').forEach((b) =>
+      b.classList.toggle('active', (b.dataset.v === 'on') === !!s.haptics));
+    this.el.querySelectorAll('#set-fps button').forEach((b) =>
+      b.classList.toggle('active', (b.dataset.v === 'on') === !!s.fpsMeter));
   }
 
   _refreshQuality() {

@@ -3,7 +3,7 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v13 · 2026-07-02';
+export const BUILD = 'v14 · 2026-07-02';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -21,6 +21,7 @@ import { PickupManager } from '../entities/Pickup.js';
 import { Input } from '../systems/Input.js';
 import { TouchControls, isTouchDevice } from '../systems/TouchControls.js';
 import { Settings } from '../systems/Settings.js';
+import { Haptics } from '../systems/Haptics.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
@@ -52,6 +53,7 @@ export class Game {
     this.input = new Input();
     this.audio = new Audio();
     this.touch = isTouchDevice();
+    this.haptics = new Haptics();
     this.touchControls = new TouchControls(this.input, document.getElementById('game-container'));
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this.controls = new LookControls(this.engine.camera, this.engine.renderer.domElement);
@@ -91,7 +93,7 @@ export class Game {
 
     // Perf overlay toggle: backtick (`) or F3, available any time.
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.perf.toggle(); }
+      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.settings.set('fpsMeter', !this.perf.visible); }
     });
 
     this._loop = this._loop.bind(this);
@@ -169,6 +171,7 @@ export class Game {
 
     this.player.onHurt = () => {
       this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
+      if (this.touch) this.haptics.hurt();
       // Directional damage indicator: point toward the nearest live threat.
       const atk = this._nearestZombiePos();
       if (atk) this.dirDmg.hit(atk, this.engine.camera.position);
@@ -180,6 +183,7 @@ export class Game {
     this.weapons.onShoot = (type) => {
       this.shake.add({ shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
       this.shells.eject();   // brass casing flips out of the ejection port
+      if (this.touch) this.haptics.fire();
     };
     this.weapons.onRecoil = (cfg, ads) => this._applyRecoil(cfg, ads);
     // ADS / recoil state.
@@ -195,6 +199,7 @@ export class Game {
     this.weapons.onHit = (z, headshot, point, dmg) => {
       this._lastHeadshot = headshot;
       this.hud.hitmark(headshot);
+      if (this.touch) this.haptics.hit();
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
@@ -211,6 +216,7 @@ export class Game {
       // Kill-confirm: distinct elimination hitmarker + crisp ding (COD feel).
       this.hud.hitmark(this._lastHeadshot, true);
       this.audio.killConfirm(this._lastHeadshot);
+      if (this.touch) this.haptics.kill();
       // hit-stop punch on kills (a touch longer on brutes)
       this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
       this.shake.add(0.12);
