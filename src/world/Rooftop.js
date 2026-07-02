@@ -217,11 +217,11 @@ export class Rooftop {
   }
 
   _buildLights() {
-    this.root.add(new THREE.AmbientLight(0x3c4358, 1.6));
-    this.root.add(new THREE.HemisphereLight(0x5a6a8f, 0x14161c, 1.1));
+    this.root.add(new THREE.AmbientLight(0x4c5570, 2.6));
+    this.root.add(new THREE.HemisphereLight(0x7488b0, 0x1c2028, 1.9));
 
     // Cold moonlight.
-    const moon = new THREE.DirectionalLight(0xbdd2ff, 1.35);
+    const moon = new THREE.DirectionalLight(0xbdd2ff, 2.1);
     moon.position.set(-10, 22, 6);
     moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024);
@@ -232,9 +232,9 @@ export class Rooftop {
     moon.shadow.bias = -0.0004;
     this.root.add(moon); this.root.add(moon.target);
 
-    // A couple of warm rooftop floods so the play space reads clearly.
-    for (const [x, z] of [[-8, -2], [10, 10], [0, -18]]) {
-      const pl = new THREE.PointLight(0xffe2b8, 16, 30, 2);
+    // Warm rooftop floods so the play space reads clearly at night.
+    for (const [x, z] of [[-8, -2], [10, 10], [0, -18], [14, -8], [-14, 12], [0, 4]]) {
+      const pl = new THREE.PointLight(0xffe2b8, 26, 34, 2);
       pl.position.set(x, 6.5, z);
       this.root.add(pl);
     }
