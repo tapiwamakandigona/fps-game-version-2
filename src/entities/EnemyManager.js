@@ -35,15 +35,19 @@ export class EnemyManager {
     this.boss = null;
     this.spits = [];
     this.endless = false;      // when true, waves never end — survive as long as you can
+    // Touch handicap: thumb aiming is slower than a mouse, so zombies move a
+    // touch slower and intermissions run longer on touch devices (set by Game).
+    this.touchTuning = false;
   }
 
   start() { this._beginWave(1); }
 
   _waveStats(w) {
+    const speedScale = this.touchTuning ? 0.9 : 1;
     return {
       count: WAVE_COUNTS[w - 1] ?? (15 + w * 2),
       health: 70 + w * 18,
-      speed: 1.5 + w * 0.22,
+      speed: (1.5 + w * 0.22) * speedScale,
       damage: 9 + w * 2,
     };
   }
@@ -233,7 +237,7 @@ export class EnemyManager {
         if (this.onVictory) this.onVictory();
       } else {
         this.state = 'intermission';
-        this.interT = INTERMISSION;
+        this.interT = INTERMISSION + (this.touchTuning ? 2 : 0);
         if (this.onWaveCleared) this.onWaveCleared(this.wave + 1);
         if (this.onIntermission) this.onIntermission(this.wave + 1, Math.ceil(this.interT));
       }

@@ -29,7 +29,7 @@ export class SettingsPanel {
         </div>
         <div class="set-row">
           <label>Look sensitivity</label>
-          <input type="range" id="set-sens" min="0.3" max="2.0" step="0.05">
+          <input type="range" id="set-sens" min="0.3" max="3.0" step="0.05">
           <span class="set-val" id="set-sens-v"></span>
         </div>
         <div class="set-row">

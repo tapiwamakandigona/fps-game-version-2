@@ -3,14 +3,16 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v14 · 2026-07-02';
+export const BUILD = 'v15 · 2026-07-02';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
+import { Rooftop } from '../world/Rooftop.js';
 
 const ARENAS = [
   { name: 'WAREHOUSE', cls: Warehouse, sub: 'WAREHOUSE: CONTAINMENT' },
   { name: 'FOUNDRY', cls: Foundry, sub: 'FOUNDRY: MELTDOWN' },
+  { name: 'ROOFTOP', cls: Rooftop, sub: 'ROOFTOP: BLACKOUT' },
 ];
 const ARENA_KEY = 'fps-v2-arena';
 import { Player } from '../entities/Player.js';
@@ -108,6 +110,8 @@ export class Game {
     this.player.onFootstep = (i) => this.audio.footstep(i);
     this.weapons = new WeaponManager(this.engine.camera, this.engine.scene, this.audio, this.hud);
     this.enemies = new EnemyManager(this.engine.scene, this.player, this.world, this.audio);
+    // Fairness: thumb aiming can't track like a mouse — ease pacing on touch.
+    this.enemies.touchTuning = this.touch;
     this.pickups = new PickupManager(this.engine.scene);
     this.pickups.onCollect = (type, amount) => this._onPickup(type, amount);
     this.damageNumbers = new DamageNumbers(this.engine.camera, document.getElementById('hud'));
