@@ -169,6 +169,13 @@ body.is-touch #ammo-reserve { display: none; }
 body.is-touch #health { left: 50%; transform: translateX(-50%); bottom: 52px; gap: 8px; }
 body.is-touch #health-bar { width: 150px; height: 12px; }
 body.is-touch #health-text { font-size: 12px; }
+/* Very small phones: slimmer health bar, nudged left of centre so it clears
+   the JUMP button. */
+@media (max-width: 700px) {
+  body.is-touch #health { left: 44%; }
+  body.is-touch #health-bar { width: 104px; height: 10px; }
+  body.is-touch #health-text { font-size: 10px; }
+}
 body.is-touch #score { font-size: 20px; }
 @media (max-width: 560px) {
   body.is-touch #ammo-counts { font-size: 20px; }
