@@ -60,6 +60,9 @@ export class HUD {
   setGrenades(n) {
     if (!this._nade) this._nade = document.getElementById('nade-count');
     if (this._nade) this._nade.textContent = n;
+    // Mirror onto the touch NADE button badge (minimalist mobile HUD).
+    if (!this._tbNade) this._tbNade = document.getElementById('tb-nade');
+    if (this._tbNade) this._tbNade.textContent = n;
   }
 
   showBoss(name) {
@@ -110,6 +113,9 @@ export class HUD {
   setTacticals(n) {
     if (!this._flash) this._flash = document.getElementById('flash-count');
     if (this._flash) this._flash.textContent = n;
+    // Mirror onto the touch FLASH button badge (minimalist mobile HUD).
+    if (!this._tbFlash) this._tbFlash = document.getElementById('tb-flash');
+    if (this._tbFlash) this._tbFlash.textContent = n;
   }
 
   // Whites out the screen, then fades over a duration scaled by blind strength (0..1).

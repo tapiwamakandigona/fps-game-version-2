@@ -24,8 +24,8 @@ export class TouchControls {
       <div id="joystick"><div id="joy-knob"></div></div>
       <div id="touch-buttons">
         <button id="t-swap" class="t-btn t-mini">SWAP</button>
-        <button id="t-nade" class="t-btn t-mini">NADE</button>
-        <button id="t-flash" class="t-btn t-mini">FLASH</button>
+        <button id="t-nade" class="t-btn t-mini">NADE<span class="t-badge" id="tb-nade">3</span></button>
+        <button id="t-flash" class="t-btn t-mini">FLASH<span class="t-badge" id="tb-flash">2</span></button>
         <button id="t-reload" class="t-btn t-mini">RLD</button>
         <button id="t-crouch" class="t-btn t-mini">CRCH</button>
         <button id="t-jump" class="t-btn t-small">JUMP</button>

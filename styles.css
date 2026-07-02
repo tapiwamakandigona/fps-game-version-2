@@ -128,7 +128,11 @@ body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 11
   background: rgba(20,28,42,0.42); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
   transition: transform 0.06s, background 0.1s, opacity 0.1s; display: flex; align-items: center; justify-content: center; }
 .t-btn:active { transform: scale(0.9); background: rgba(127,178,255,0.4); opacity: 1; }
-.t-mini { width: 36px; height: 36px; font-size: 7px; opacity: 0.45; }
+.t-mini { width: 36px; height: 36px; font-size: 7px; opacity: 0.45; position: relative; }
+.t-badge { position: absolute; top: -4px; right: -4px; min-width: 14px; height: 14px;
+  border-radius: 7px; background: rgba(127,178,255,0.85); color: #0a0e16;
+  font-size: 9px; font-weight: 800; display: flex; align-items: center;
+  justify-content: center; padding: 0 3px; }
 .t-small { width: 54px; height: 54px; font-size: 10px; opacity: 0.7; }
 .t-fire { width: 86px; height: 86px; font-size: 15px; color: #fff;
   border-color: rgba(255,107,94,0.6); background: rgba(120,30,26,0.5); }
@@ -157,8 +161,14 @@ body.is-touch #ammo-name { font-size: 11px; letter-spacing: 1px; }
 body.is-touch #ammo-counts { font-size: 22px; }
 body.is-touch #ammo-reserve { font-size: 10px; }
 /* Grenade / flashbang counts sit inline so the block stays short. */
-body.is-touch #ammo-nade, body.is-touch #ammo-flash {
-  display: inline-block; font-size: 10px; margin: 1px 5px 0; }
+/* Minimalist touch HUD: grenade/flash counts live on their buttons, not in the
+   ammo block, and the health bar docks above the ammo readout at bottom-centre
+   (clear of the joystick and the button cluster). */
+body.is-touch #ammo-nade, body.is-touch #ammo-flash { display: none; }
+body.is-touch #ammo-reserve { display: none; }
+body.is-touch #health { left: 50%; transform: translateX(-50%); bottom: 52px; gap: 8px; }
+body.is-touch #health-bar { width: 150px; height: 12px; }
+body.is-touch #health-text { font-size: 12px; }
 body.is-touch #score { font-size: 20px; }
 @media (max-width: 560px) {
   body.is-touch #ammo-counts { font-size: 20px; }
