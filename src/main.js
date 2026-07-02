@@ -7,6 +7,14 @@ function fail(msg) {
   console.error('[FPS Arena]', msg);
 }
 
+// PWA: offline cache + installability (manifest.webmanifest). Registered after
+// load so it never competes with the game boot for bandwidth.
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+});
+
 window.addEventListener('DOMContentLoaded', () => {
   // basic WebGL check
   try {

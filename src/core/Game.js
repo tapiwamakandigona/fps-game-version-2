@@ -3,7 +3,7 @@ import { LookControls } from '../systems/LookControls.js';
 
 // Build stamp — bump on each deploy so testers can confirm they're on the latest
 // (GitHub Pages caches files ~10 min; a stale tag here means the browser cached old code).
-export const BUILD = 'v12 · 2026-06-14';
+export const BUILD = 'v14 · 2026-07-02';
 import { Engine } from './Engine.js';
 import { Warehouse } from '../world/Warehouse.js';
 import { Foundry } from '../world/Foundry.js';
@@ -21,6 +21,7 @@ import { PickupManager } from '../entities/Pickup.js';
 import { Input } from '../systems/Input.js';
 import { TouchControls, isTouchDevice } from '../systems/TouchControls.js';
 import { Settings } from '../systems/Settings.js';
+import { Haptics } from '../systems/Haptics.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Audio } from '../systems/Audio.js';
 import { HUD } from '../ui/HUD.js';
@@ -52,6 +53,7 @@ export class Game {
     this.input = new Input();
     this.audio = new Audio();
     this.touch = isTouchDevice();
+    this.haptics = new Haptics();
     this.touchControls = new TouchControls(this.input, document.getElementById('game-container'));
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this.controls = new LookControls(this.engine.camera, this.engine.renderer.domElement);
@@ -85,12 +87,13 @@ export class Game {
 
     this.hud.hideLoading();
     if (this.touch) this._applyTouchMenu();
+    this._watchOrientation();
     this.hud.showMenu(this.best);
     this.engine.camera.position.copy(this.world.playerSpawn);
 
     // Perf overlay toggle: backtick (`) or F3, available any time.
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.perf.toggle(); }
+      if (e.code === 'Backquote' || e.code === 'F3') { e.preventDefault(); this.settings.set('fpsMeter', !this.perf.visible); }
     });
 
     this._loop = this._loop.bind(this);
@@ -159,9 +162,16 @@ export class Game {
       for (let i = 0; i < zs.length; i++) if (zs[i].alive) t.push(zs[i].group);
       return t;
     };
+    // Aim assist (touch): give weapons access to live zombies and apply the
+    // saved setting now that the weapon manager exists.
+    this.weapons.getZombies = () => this.enemies.zombies;
+    // (settings may not exist yet during construction; Settings.apply() sets
+    // the definitive value right after, so default to the saved/true value here.)
+    this.weapons.aimAssist = !!(this.touch && this.settings && this.settings.get('aimAssist'));
 
     this.player.onHurt = () => {
       this.hud.flashDamage(); this.audio.hurt(); this.shake.add(0.4);
+      if (this.touch) this.haptics.hurt();
       // Directional damage indicator: point toward the nearest live threat.
       const atk = this._nearestZombiePos();
       if (atk) this.dirDmg.hit(atk, this.engine.camera.position);
@@ -173,6 +183,7 @@ export class Game {
     this.weapons.onShoot = (type) => {
       this.shake.add({ shotgun: 0.32, rifle: 0.30, smg: 0.10, pistol: 0.16 }[type] ?? 0.16);
       this.shells.eject();   // brass casing flips out of the ejection port
+      if (this.touch) this.haptics.fire();
     };
     this.weapons.onRecoil = (cfg, ads) => this._applyRecoil(cfg, ads);
     // ADS / recoil state.
@@ -188,6 +199,7 @@ export class Game {
     this.weapons.onHit = (z, headshot, point, dmg) => {
       this._lastHeadshot = headshot;
       this.hud.hitmark(headshot);
+      if (this.touch) this.haptics.hit();
       if (point && dmg) this.damageNumbers.spawn(point, dmg, headshot);
       if (headshot) { this.score += 50; this.hud.message('HEADSHOT  +50', 700); this.hud.setScore(this.score); }
     };
@@ -204,6 +216,7 @@ export class Game {
       // Kill-confirm: distinct elimination hitmarker + crisp ding (COD feel).
       this.hud.hitmark(this._lastHeadshot, true);
       this.audio.killConfirm(this._lastHeadshot);
+      if (this.touch) this.haptics.kill();
       // hit-stop punch on kills (a touch longer on brutes)
       this._hitStop = Math.max(this._hitStop, z.variant === 'brute' ? 0.06 : 0.04);
       this.shake.add(0.12);
@@ -357,6 +370,9 @@ export class Game {
     this.controls.addEventListener('unlock', () => {
       if (this.state === 'playing') { this.state = 'paused'; this.hud.showPause(true); this.input.setEnabled(false); }
     });
+    // Pointer lock can fail (permissions policy, embedded iframe, browser quirk).
+    // Without feedback the menu just appears dead — tell the player instead.
+    this.controls.addEventListener('lockerror', () => this._lockFailed());
   }
 
   _wireButtons() {
@@ -453,6 +469,34 @@ export class Game {
     } catch (e) { this.music = null; }
   }
 
+  // Pointer lock was denied: restore the menu button with a visible hint so the
+  // player knows what happened and can retry.
+  _lockFailed() {
+    const b = document.getElementById('start-btn');
+    if (!b) return;
+    b.textContent = 'MOUSE LOCK BLOCKED — CLICK AGAIN';
+    clearTimeout(this._lockMsgT);
+    this._lockMsgT = setTimeout(() => { b.textContent = 'CLICK TO PLAY'; }, 2600);
+  }
+
+  // Landscape-only on touch: a CSS overlay (#rotate-overlay) covers the screen in
+  // portrait; here we also auto-pause a live run so the player takes no damage
+  // while the phone is the wrong way up.
+  _watchOrientation() {
+    if (!this.touch || !window.matchMedia) return;
+    const mq = window.matchMedia('(orientation: portrait)');
+    const onChange = () => {
+      if (mq.matches && this.state === 'playing') {
+        this.state = 'paused';
+        this.hud.showPause(true);
+        this.input.setEnabled(false);
+        this.touchControls.setEnabled(false);
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+
   _requestLock() {
     this.audio.resume();
     this._ensureMusic();
@@ -462,7 +506,7 @@ export class Game {
       else if (this.state === 'paused') { this.state = 'playing'; this.hud.showPause(false); this.input.setEnabled(true); this.touchControls.setEnabled(true); }
       return;
     }
-    try { this.controls.lock(); } catch (e) {}
+    try { this.controls.lock(); } catch (e) { this._lockFailed(); }
   }
 
   _startRun() {
@@ -598,6 +642,24 @@ export class Game {
     return best ? best.group.position : null;
   }
 
+  // True when the first solid thing under the crosshair is a live zombie —
+  // walls and crates block the check, so auto-fire never wastes ammo on cover.
+  _enemyOnCrosshair() {
+    if (!this._afRay) { this._afRay = new THREE.Raycaster(); this._afRay.far = 80; this._afDir = new THREE.Vector3(); }
+    const cam = this.engine.camera;
+    cam.getWorldDirection(this._afDir);
+    this._afRay.set(cam.position, this._afDir);
+    const hits = this._afRay.intersectObjects(this.weapons.getTargets(), true);
+    for (const h of hits) {
+      let ignored = false;
+      for (let o = h.object; o; o = o.parent) if (o.userData && o.userData.noHit) { ignored = true; break; }
+      if (ignored) continue;
+      for (let o = h.object; o; o = o.parent) if (o.userData && o.userData.zombie) return o.userData.zombie.alive === true;
+      return false; // first solid hit was world geometry
+    }
+    return false;
+  }
+
   // Radial AoE explosion (used by the Mortar killstreak): damage + FX, like a grenade.
   _explodeAt(pos, radius = 6, baseDmg = 170) {
     for (const z of this.enemies.zombies) {
@@ -632,6 +694,16 @@ export class Game {
       // Lower the weapon while sprinting (not while aiming).
       if (this.weapons.current) this.weapons.current._sprint = this.player.sprinting && !this.weapons.adsActive;
       this.weapons.update(dt, this.input.mouseDown);
+      // Optional touch auto-fire: pulls the trigger while the crosshair rests on
+      // an enemy, so one thumb can stay on movement. Checked ~12×/s; the weapon's
+      // own fireInterval still limits the actual rate of fire.
+      if (this.touch && !this.input.mouseDown && this.settings.get('autoFire')) {
+        this._autoFireT = (this._autoFireT || 0) - dt;
+        if (this._autoFireT <= 0) {
+          this._autoFireT = 0.08;
+          if (this._enemyOnCrosshair()) this.weapons.fire();
+        }
+      }
       this.enemies.update(dt, t);
       this.pickups.update(dt, this.engine.camera.position);
       this.damageNumbers.update(dt);

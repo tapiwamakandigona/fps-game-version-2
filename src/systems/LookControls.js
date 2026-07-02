@@ -25,7 +25,7 @@ export class LookControls {
     this._emaMag = 0;            // running estimate of typical per-event mouse delta
 
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
-    this._listeners = { lock: [], unlock: [], change: [] };
+    this._listeners = { lock: [], unlock: [], change: [], lockerror: [] };
 
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onLockChange = this._onLockChange.bind(this);
@@ -39,7 +39,15 @@ export class LookControls {
   addEventListener(type, fn) { if (this._listeners[type]) this._listeners[type].push(fn); }
   _emit(type) { for (const fn of this._listeners[type] || []) fn(); }
 
-  lock() { this.dom.requestPointerLock?.(); }
+  lock() {
+    // requestPointerLock returns a Promise in modern browsers; a rejection
+    // (permissions policy, embedded iframe, user-agent quirk) used to be a
+    // silent unhandled error that left the menu stuck. Surface it instead.
+    try {
+      const r = this.dom.requestPointerLock?.();
+      if (r && typeof r.catch === 'function') r.catch(() => this._emit('lockerror'));
+    } catch (e) { this._emit('lockerror'); }
+  }
   unlock() { if (document.pointerLockElement) document.exitPointerLock?.(); }
 
   _onLockChange() {
@@ -48,7 +56,7 @@ export class LookControls {
     this.isLocked = locked;
     this._emit(locked ? 'lock' : 'unlock');
   }
-  _onLockError() { /* ignore — user can click to retry */ }
+  _onLockError() { this._emit('lockerror'); }
 
   _onMouseMove(e) {
     if (!this.isLocked) return;

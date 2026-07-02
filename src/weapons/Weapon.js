@@ -36,6 +36,13 @@ export class Weapon {
     // Curated raycast target provider: returns the small list of bullet-blocking
     // meshes + live enemy groups instead of the whole scene graph. Set by Game.
     this.getTargets = null;
+    // Aim-assist (touch): live-zombie provider + per-frame enable flag, both
+    // driven by WeaponManager/Game. When on, shots inside a small cone are
+    // magnetised toward the nearest enemy's torso.
+    this.getZombies = null;
+    this.aimAssist = false;
+    this._aaTo = new THREE.Vector3();
+    this._aaBest = new THREE.Vector3();
     this._buildModel();
   }
 
@@ -180,6 +187,7 @@ export class Weapon {
 
   _fireOne(spreadDeg, acc) {
     this.camera.getWorldDirection(this._dir);
+    if (this.aimAssist) this._applyAimAssist(this._dir);
     if (spreadDeg > 0) {
       const s = spreadDeg * Math.PI / 180;
       this._dir.x += (Math.random() - 0.5) * s;
@@ -215,6 +223,30 @@ export class Weapon {
       break; // first solid surface stops the pellet
     }
     this._spawnTracer(endPoint);
+  }
+
+  // Touch aim assist: find the closest-to-crosshair live zombie inside a ~4°
+  // cone (within 60 m) and pull the shot direction most of the way toward its
+  // torso. Walls still block the ray, so no shooting through cover.
+  _applyAimAssist(dir) {
+    const zs = this.getZombies ? this.getZombies() : null;
+    if (!zs || !zs.length) return;
+    const CONE = Math.cos(4.0 * Math.PI / 180);
+    const camPos = this.camera.position;
+    let bestDot = CONE, found = false;
+    for (let i = 0; i < zs.length; i++) {
+      const z = zs[i];
+      if (!z.alive) continue;
+      this._aaTo.copy(z.group.position);
+      this._aaTo.y += 1.15;                    // torso height
+      this._aaTo.sub(camPos);
+      const d = this._aaTo.length();
+      if (d < 1.5 || d > 60) continue;
+      this._aaTo.multiplyScalar(1 / d);
+      const dot = this._aaTo.dot(dir);
+      if (dot > bestDot) { bestDot = dot; this._aaBest.copy(this._aaTo); found = true; }
+    }
+    if (found) dir.lerp(this._aaBest, 0.85).normalize();
   }
 
   _spawnTracer(endWorld) {

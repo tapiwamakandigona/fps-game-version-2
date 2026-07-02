@@ -1,7 +1,7 @@
 // Persistent player settings: brightness, quality, look sensitivity, volume.
 const KEY = 'fps-v2-settings';
 export const BASE_LOOK_SENS = 0.0040;
-const DEFAULTS = { brightness: 1.35, quality: 'high', sensitivity: 1.0, volume: 0.5, fov: 90 };
+const DEFAULTS = { brightness: 1.35, quality: 'high', sensitivity: 1.0, volume: 0.5, fov: 90, aimAssist: true, autoFire: false, haptics: true, fpsMeter: false };
 
 export class Settings {
   constructor(game) {
@@ -23,6 +23,11 @@ export class Settings {
     if (this.game.controls) this.game.controls.pointerSpeed = v.sensitivity;
     if (this.game._baseFov !== undefined) this.game._baseFov = v.fov; // ADS loop applies it live
     if (this.game.touchControls) this.game.touchControls.lookSens = BASE_LOOK_SENS * v.sensitivity;
+    // Aim assist is a touch-only helper; desktop mouse aim never gets magnetism.
+    if (this.game.weapons) this.game.weapons.aimAssist = !!(this.game.touch && v.aimAssist);
+    if (this.game.haptics) this.game.haptics.enabled = !!v.haptics;
+    // FPS meter: settings toggle mirrors the desktop `/F3 hotkey.
+    if (this.game.perf && this.game.perf.visible !== !!v.fpsMeter) this.game.perf.toggle();
   }
 
   set(k, val) { this.values[k] = val; this.apply(); this.save(); }

@@ -123,13 +123,13 @@ body.is-touch #minimap { top: 10px !important; right: 10px !important; width: 11
 #t-reload { grid-area: reload; } #t-jump { grid-area: jump; } #t-crouch { grid-area: crouch; }
 #t-ads { grid-area: ads; } #t-fire { grid-area: fire; }
 .t-btn { pointer-events: auto; touch-action: none; margin: 0; font-family: inherit; font-weight: 800;
-  letter-spacing: 0.5px; color: #eaf2ff; border: 2px solid rgba(127,178,255,0.45);
-  background: rgba(20,28,42,0.5); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.45);
-  transition: transform 0.06s, background 0.1s; display: flex; align-items: center; justify-content: center; }
-.t-btn:active { transform: scale(0.9); background: rgba(127,178,255,0.4); }
-.t-mini { width: 50px; height: 50px; font-size: 9px; opacity: 0.9; }
-.t-small { width: 64px; height: 64px; font-size: 12px; }
-.t-fire { width: 98px; height: 98px; font-size: 18px; color: #fff;
+  letter-spacing: 0.5px; color: #eaf2ff; border: 1.5px solid rgba(127,178,255,0.4);
+  background: rgba(20,28,42,0.42); border-radius: 50%; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  transition: transform 0.06s, background 0.1s, opacity 0.1s; display: flex; align-items: center; justify-content: center; }
+.t-btn:active { transform: scale(0.9); background: rgba(127,178,255,0.4); opacity: 1; }
+.t-mini { width: 42px; height: 42px; font-size: 8px; opacity: 0.75; }
+.t-small { width: 54px; height: 54px; font-size: 10px; opacity: 0.82; }
+.t-fire { width: 86px; height: 86px; font-size: 15px; color: #fff;
   border-color: rgba(255,107,94,0.6); background: rgba(120,30,26,0.5); }
 .t-fire:active { background: rgba(255,107,94,0.45); }
 
@@ -139,10 +139,10 @@ body.is-touch .reload-key { display: none; }
 @media (max-width: 560px) {
   #joystick { width: 120px; height: 120px; left: 16px; bottom: 16px; }
   #joy-knob { width: 52px; height: 52px; }
-  #touch-buttons { right: 12px; bottom: 12px; gap: 7px; }
-  .t-mini { width: 44px; height: 44px; font-size: 8px; }
-  .t-small { width: 56px; height: 56px; font-size: 11px; }
-  .t-fire { width: 86px; height: 86px; font-size: 15px; }
+  #touch-buttons { right: 12px; bottom: 12px; gap: 6px; }
+  .t-mini { width: 38px; height: 38px; font-size: 7px; }
+  .t-small { width: 48px; height: 48px; font-size: 9px; }
+  .t-fire { width: 74px; height: 74px; font-size: 13px; }
   .controls-help { grid-template-columns: repeat(2,auto); }
   .panel { padding: 28px 30px; }
   .panel h1 { font-size: 40px; }
@@ -162,6 +162,25 @@ body.is-touch #score { font-size: 20px; }
 @media (max-width: 560px) {
   body.is-touch #ammo-counts { font-size: 20px; }
 }
+
+/* ---------- Landscape-only prompt (touch) ----------
+   The game is designed for landscape; in portrait the HUD and button cluster
+   collide. On touch devices a full-screen prompt covers everything (Game.js
+   also auto-pauses a live run). Desktop is never affected. */
+#rotate-overlay { display: none; position: absolute; inset: 0; z-index: 60;
+  align-items: center; justify-content: center; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(10,12,20,0.92), rgba(3,4,8,0.99)); }
+.rotate-card h2 { font-size: 24px; letter-spacing: 4px; color: #fff; margin-top: 14px; }
+.rotate-card p { color: #9aa6b2; margin-top: 8px; letter-spacing: 1px; }
+.rotate-icon { font-size: 56px; display: inline-block; animation: rotateHint 1.8s ease-in-out infinite; }
+@keyframes rotateHint { 0%, 25% { transform: rotate(0deg); } 60%, 100% { transform: rotate(90deg); } }
+@media (orientation: portrait) {
+  body.is-touch #rotate-overlay { display: flex; }
+}
+
+/* Touch-only settings rows (aim assist / auto-fire) are hidden on desktop. */
+.set-row.touch-setting { display: none; }
+body.is-touch .set-row.touch-setting { display: grid; }
 
 /* Touch-only elements are hidden unless the device is touch-enabled. */
 .touch-only { display: none; }
