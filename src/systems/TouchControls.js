@@ -26,9 +26,9 @@ export class TouchControls {
         <button id="t-swap" class="t-btn t-mini">SWAP</button>
         <button id="t-nade" class="t-btn t-mini">NADE</button>
         <button id="t-flash" class="t-btn t-mini">FLASH</button>
-        <button id="t-reload" class="t-btn t-small">RELOAD</button>
+        <button id="t-reload" class="t-btn t-mini">RLD</button>
+        <button id="t-crouch" class="t-btn t-mini">CRCH</button>
         <button id="t-jump" class="t-btn t-small">JUMP</button>
-        <button id="t-crouch" class="t-btn t-small">CROUCH</button>
         <button id="t-ads" class="t-btn t-small">ADS</button>
         <button id="t-fire" class="t-btn t-fire">FIRE</button>
       </div>`;
